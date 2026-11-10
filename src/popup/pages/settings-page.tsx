@@ -1,11 +1,62 @@
 
-import { ArrowLeft, Bell, Shield, Globe, RotateCcw } from 'lucide-react'
+import {
+  ArrowLeft,
+  Bell,
+  RotateCcw,
+} from 'lucide-react'
+
+import { Switch } from '@/components/ui/switch'
 
 interface SettingsPageProps {
   onBack: () => void
+  notifications: boolean
+  locationProtection: boolean
+  privacyProtection: boolean
+  onNotificationsChange: (checked: boolean) => void
+  onLocationProtectionChange: (checked: boolean) => void
+  onPrivacyProtectionChange: (checked: boolean) => void
+  onReset: () => void
 }
 
-function SettingsPage({ onBack }: SettingsPageProps) {
+interface SettingToggleProps {
+  label: string
+  description: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}
+
+function SettingToggle({
+  label,
+  description,
+  checked,
+  onChange,
+}: SettingToggleProps) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-3">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+
+      <Switch
+        checked={checked}
+        onCheckedChange={onChange}
+        aria-label={label}
+      />
+    </div>
+  )
+}
+
+function SettingsPage({
+  onBack,
+  notifications,
+  locationProtection,
+  privacyProtection,
+  onNotificationsChange,
+  onLocationProtectionChange,
+  onPrivacyProtectionChange,
+  onReset,
+}: SettingsPageProps) {
   return (
     <main className="space-y-5 p-4">
       <div className="flex items-center gap-3">
@@ -27,37 +78,31 @@ function SettingsPage({ onBack }: SettingsPageProps) {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold">General</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <Bell className="size-4" />
+          General
+        </h2>
 
-        <div className="flex items-center gap-3 rounded-lg border p-3">
-          <Bell className="size-5 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-medium">Notifications</p>
-            <p className="text-xs text-muted-foreground">
-              Manage privacy alerts
-            </p>
-          </div>
-        </div>
+        <SettingToggle
+          label="Notifications"
+          description="Receive privacy alerts"
+          checked={notifications}
+          onChange={onNotificationsChange}
+        />
 
-        <div className="flex items-center gap-3 rounded-lg border p-3">
-          <Globe className="size-5 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-medium">Location Settings</p>
-            <p className="text-xs text-muted-foreground">
-              Manage location privacy
-            </p>
-          </div>
-        </div>
+        <SettingToggle
+          label="Location Protection"
+          description="Manage location privacy"
+          checked={locationProtection}
+          onChange={onLocationProtectionChange}
+        />
 
-        <div className="flex items-center gap-3 rounded-lg border p-3">
-          <Shield className="size-5 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-medium">Privacy Protection</p>
-            <p className="text-xs text-muted-foreground">
-              Configure protection behavior
-            </p>
-          </div>
-        </div>
+        <SettingToggle
+          label="Privacy Protection"
+          description="Enable privacy protection controls"
+          checked={privacyProtection}
+          onChange={onPrivacyProtectionChange}
+        />
       </section>
 
       <section className="space-y-3">
@@ -65,9 +110,11 @@ function SettingsPage({ onBack }: SettingsPageProps) {
 
         <button
           type="button"
+          onClick={onReset}
           className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted"
         >
           <RotateCcw className="size-5 text-muted-foreground" />
+
           <div>
             <p className="text-sm font-medium">Reset Settings</p>
             <p className="text-xs text-muted-foreground">
