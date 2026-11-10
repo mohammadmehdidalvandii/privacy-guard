@@ -1,5 +1,4 @@
-
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import PopupLayout from '@/popup/layouts/popup-layout'
 import PopupHeader from '@/popup/components/popup-header'
@@ -12,50 +11,87 @@ import ProfileSelector, {
 } from '@/popup/components/profile-selector'
 import SettingsPage from '@/popup/pages/settings-page'
 
-const defaultSettings = {
-  notifications: true,
-  locationProtection: true,
-  privacyProtection: true,
-}
+import {
+  DEFAULT_SETTINGS,
+  getSettings,
+  resetSettings as resetStoredSettings,
+  saveSettings,
+  type AppSettings,
+} from '@/services/storage/settings-storage'
 
 function App() {
   const [profile, setProfile] = useState<ProtectionProfile>('basic')
   const [currentPage, setCurrentPage] = useState<'home' | 'settings'>('home')
-  const [settings, setSettings] = useState(defaultSettings)
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
+  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false)
 
-  const updateSetting = (
-    key: keyof typeof defaultSettings,
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const storedSettings = await getSettings()
+        setSettings(storedSettings)
+      } catch (error) {
+        console.error('Failed to load settings:', error)
+      } finally {
+        setIsSettingsLoaded(true)
+      }
+    }
+
+    void loadSettings()
+  }, [])
+
+  const updateSetting = async (
+    key: keyof AppSettings,
     checked: boolean,
   ) => {
-    setSettings((previous) => ({
-      ...previous,
+    const updatedSettings = {
+      ...settings,
       [key]: checked,
-    }))
+    }
+
+    setSettings(updatedSettings)
+
+    try {
+      await saveSettings(updatedSettings)
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+    }
   }
 
-  const resetSettings = () => {
-    setSettings({ ...defaultSettings })
+  const handleResetSettings = async () => {
+    try {
+      const defaultSettings = await resetStoredSettings()
+      setSettings(defaultSettings)
+    } catch (error) {
+      console.error('Failed to reset settings:', error)
+    }
   }
 
   return (
     <PopupLayout>
       {currentPage === 'settings' ? (
-        <SettingsPage
-          onBack={() => setCurrentPage('home')}
-          notifications={settings.notifications}
-          locationProtection={settings.locationProtection}
-          privacyProtection={settings.privacyProtection}
-          onNotificationsChange={(checked) =>
-            updateSetting('notifications', checked)
-          }
-          onLocationProtectionChange={(checked) =>
-            updateSetting('locationProtection', checked)
-          }
-          onPrivacyProtectionChange={(checked) =>
-            updateSetting('privacyProtection', checked)
-          }
-          onReset={resetSettings}
-        />
+        isSettingsLoaded ? (
+          <SettingsPage
+            onBack={() => setCurrentPage('home')}
+            notifications={settings.notifications}
+            locationProtection={settings.locationProtection}
+            privacyProtection={settings.privacyProtection}
+            onNotificationsChange={(checked) =>
+              void updateSetting('notifications', checked)
+            }
+            onLocationProtectionChange={(checked) =>
+              void updateSetting('locationProtection', checked)
+            }
+            onPrivacyProtectionChange={(checked) =>
+              void updateSetting('privacyProtection', checked)
+            }
+            onReset={() => void handleResetSettings()}
+          />
+        ) : (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            Loading settings...
+          </div>
+        )
       ) : (
         <>
           <PopupHeader
