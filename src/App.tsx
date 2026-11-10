@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -8,12 +9,15 @@ import VPNStatus from '@/popup/components/vpn-status'
 import NetworkInfo from '@/popup/components/network-info'
 import PrivacyChecks from '@/popup/components/privacy-checks'
 import ProfileSelector from '@/popup/components/profile-selector'
+import ProtectionOverview from '@/popup/components/protection-overview'
 import SettingsPage from '@/popup/pages/settings-page'
 
 import {
   DEFAULT_PROFILE,
   type ProtectionProfile,
 } from '@/modules/profiles/profile.types'
+
+import { getProfileConfig } from '@/modules/profiles/profile.service'
 
 import {
   DEFAULT_SETTINGS,
@@ -38,6 +42,8 @@ function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'settings'>('home')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
+
+  const profileConfig = getProfileConfig(profile)
 
   const { data: vpnState } = useQuery({
     queryKey: ['vpn-state'],
@@ -161,13 +167,17 @@ function App() {
 
           <div className="space-y-5 p-4">
             <VPNStatus status={vpnState?.status ?? 'unknown'} />
+
             <NetworkInfo />
+
             <PrivacyChecks />
 
             <ProfileSelector
               value={profile}
               onChange={(newProfile) => void updateProfile(newProfile)}
             />
+
+            <ProtectionOverview config={profileConfig} />
           </div>
 
           <PopupFooter

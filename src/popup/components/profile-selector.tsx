@@ -1,11 +1,6 @@
-
 import { Shield, ShieldCheck, SlidersHorizontal, MapPin } from 'lucide-react'
 
-export type ProtectionProfile =
-  | 'basic'
-  | 'advanced'
-  | 'custom-location'
-  | 'strict'
+import type { ProtectionProfile } from '@/modules/profiles/profile.types'
 
 interface ProfileSelectorProps {
   value: ProtectionProfile
