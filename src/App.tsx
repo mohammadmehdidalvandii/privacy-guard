@@ -94,10 +94,10 @@ function App() {
   }, [queryClient])
 
   const updateSetting = async (
-    key: keyof AppSettings,
+    key: 'notifications' | 'locationProtection' | 'privacyProtection',
     checked: boolean,
   ) => {
-    const updatedSettings = {
+    const updatedSettings: AppSettings = {
       ...settings,
       [key]: checked,
     }
@@ -108,6 +108,21 @@ function App() {
       await saveSettings(updatedSettings)
     } catch (error) {
       console.error('Failed to save settings:', error)
+    }
+  }
+
+  const updateExpectedCountry = async (countryCode: string | null) => {
+    const updatedSettings: AppSettings = {
+      ...settings,
+      expectedCountryCode: countryCode,
+    }
+
+    setSettings(updatedSettings)
+
+    try {
+      await saveSettings(updatedSettings)
+    } catch (error) {
+      console.error('Failed to save expected country:', error)
     }
   }
 
@@ -148,6 +163,8 @@ function App() {
           notifications={settings.notifications}
           locationProtection={settings.locationProtection}
           privacyProtection={settings.privacyProtection}
+          isCustomLocation={profile === 'custom-location'}
+          expectedCountryCode={settings.expectedCountryCode}
           onNotificationsChange={(checked) =>
             void updateSetting('notifications', checked)
           }
@@ -156,6 +173,9 @@ function App() {
           }
           onPrivacyProtectionChange={(checked) =>
             void updateSetting('privacyProtection', checked)
+          }
+          onExpectedCountryChange={(countryCode) =>
+            void updateExpectedCountry(countryCode)
           }
           onReset={() => void handleResetSettings()}
         />

@@ -1,20 +1,33 @@
-
 import {
   ArrowLeft,
   Bell,
+  MapPin,
   RotateCcw,
+  X,
 } from 'lucide-react'
 
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+import { COUNTRY_OPTIONS } from '@/modules/profiles/country-options'
 
 interface SettingsPageProps {
   onBack: () => void
   notifications: boolean
   locationProtection: boolean
   privacyProtection: boolean
+  isCustomLocation: boolean
+  expectedCountryCode: string | null
   onNotificationsChange: (checked: boolean) => void
   onLocationProtectionChange: (checked: boolean) => void
   onPrivacyProtectionChange: (checked: boolean) => void
+  onExpectedCountryChange: (countryCode: string | null) => void
   onReset: () => void
 }
 
@@ -52,11 +65,18 @@ function SettingsPage({
   notifications,
   locationProtection,
   privacyProtection,
+  isCustomLocation,
+  expectedCountryCode,
   onNotificationsChange,
   onLocationProtectionChange,
   onPrivacyProtectionChange,
+  onExpectedCountryChange,
   onReset,
 }: SettingsPageProps) {
+  const selectedCountry = COUNTRY_OPTIONS.find(
+    (country) => country.code === expectedCountryCode,
+  )
+
   return (
     <main className="space-y-5 p-4">
       <div className="flex items-center gap-3">
@@ -104,6 +124,59 @@ function SettingsPage({
           onChange={onPrivacyProtectionChange}
         />
       </section>
+
+      {isCustomLocation && (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <MapPin className="size-4" />
+            Custom Location
+          </h2>
+
+          <div className="space-y-2 rounded-lg border p-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Expected Country</p>
+              <p className="text-xs text-muted-foreground">
+                Select the country you expect your VPN connection to use.
+              </p>
+            </div>
+
+            <Select
+              value={expectedCountryCode ?? ''}
+              onValueChange={(value) =>
+                onExpectedCountryChange(value || null)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a country">
+                  {selectedCountry?.name}
+                </SelectValue>
+              </SelectTrigger>
+
+              <SelectContent>
+                {COUNTRY_OPTIONS.map((country) => (
+                  <SelectItem
+                    key={country.code}
+                    value={country.code}
+                  >
+                    {country.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {expectedCountryCode && (
+              <button
+                type="button"
+                onClick={() => onExpectedCountryChange(null)}
+                className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="size-3" />
+                Clear selection
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">Advanced</h2>
