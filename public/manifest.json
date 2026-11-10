@@ -1,0 +1,19 @@
+
+{
+  "manifest_version": 3,
+  "name": "Privacy Guard",
+  "version": "1.0.0",
+  "description": "Monitor network privacy, detect potential leaks, and manage browser privacy settings.",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Privacy Guard"
+  }
+}
