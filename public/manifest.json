@@ -8,6 +8,9 @@
     "storage",
     "alarms"
   ],
+  "host_permissions": [
+    "https://ipwho.is/*"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
