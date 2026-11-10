@@ -17,6 +17,13 @@ import {
 
 import { COUNTRY_OPTIONS } from '@/modules/profiles/country-options'
 
+import type {
+  ProtectionControlStatus,
+  WebRTCProtectionLevel,
+} from '@/modules/protection/protection.types'
+
+import ProtectionControls from '@/popup/components/protection-controls'
+
 interface SettingsPageProps {
   onBack: () => void
   notifications: boolean
@@ -24,10 +31,15 @@ interface SettingsPageProps {
   privacyProtection: boolean
   isCustomLocation: boolean
   expectedCountryCode: string | null
+  protectionControls: ProtectionControlStatus | null
+  isProtectionLoading: boolean
+  protectionError: string | null
   onNotificationsChange: (checked: boolean) => void
   onLocationProtectionChange: (checked: boolean) => void
   onPrivacyProtectionChange: (checked: boolean) => void
   onExpectedCountryChange: (countryCode: string | null) => void
+  onWebRTCChange: (value: WebRTCProtectionLevel) => void
+  onThirdPartyCookiesChange: (checked: boolean) => void
   onReset: () => void
 }
 
@@ -67,10 +79,15 @@ function SettingsPage({
   privacyProtection,
   isCustomLocation,
   expectedCountryCode,
+  protectionControls,
+  isProtectionLoading,
+  protectionError,
   onNotificationsChange,
   onLocationProtectionChange,
   onPrivacyProtectionChange,
   onExpectedCountryChange,
+  onWebRTCChange,
+  onThirdPartyCookiesChange,
   onReset,
 }: SettingsPageProps) {
   const selectedCountry = COUNTRY_OPTIONS.find(
@@ -177,6 +194,24 @@ function SettingsPage({
           </div>
         </section>
       )}
+
+      <section className="space-y-3">
+        {isProtectionLoading ? (
+          <p className="text-xs text-muted-foreground">
+            Loading browser protection settings...
+          </p>
+        ) : protectionError ? (
+          <p className="rounded-lg border p-3 text-xs text-destructive">
+            {protectionError}
+          </p>
+        ) : protectionControls ? (
+          <ProtectionControls
+            controls={protectionControls}
+            onWebRTCChange={onWebRTCChange}
+            onThirdPartyCookiesChange={onThirdPartyCookiesChange}
+          />
+        ) : null}
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">Advanced</h2>

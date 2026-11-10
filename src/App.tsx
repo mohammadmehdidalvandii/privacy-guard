@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -35,6 +34,17 @@ import {
 import { getVPNState } from '@/services/storage/vpn-storage'
 import { requestVPNStatus } from '@/services/messaging/vpn-messaging'
 
+import type {
+  ProtectionControls,
+  ProtectionControlStatus,
+  WebRTCProtectionLevel,
+} from '@/modules/protection/protection.types'
+
+import {
+  requestProtectionStatus,
+  updateProtectionControls,
+} from '@/services/messaging/protection-messaging'
+
 function App() {
   const queryClient = useQueryClient()
 
@@ -42,6 +52,11 @@ function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'settings'>('home')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
+
+  const [protectionControls, setProtectionControls] =
+    useState<ProtectionControlStatus | null>(null)
+  const [isProtectionLoading, setIsProtectionLoading] = useState(true)
+  const [protectionError, setProtectionError] = useState<string | null>(null)
 
   const profileConfig = getProfileConfig(profile)
 
@@ -69,6 +84,39 @@ function App() {
     }
 
     void loadAppData()
+  }, [])
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadProtectionStatus = async () => {
+      try {
+        const state = await requestProtectionStatus()
+
+        if (isActive) {
+          setProtectionControls(state)
+          setProtectionError(null)
+        }
+      } catch (error) {
+        if (isActive) {
+          setProtectionError(
+            error instanceof Error
+              ? error.message
+              : 'Failed to load browser protection settings.',
+          )
+        }
+      } finally {
+        if (isActive) {
+          setIsProtectionLoading(false)
+        }
+      }
+    }
+
+    void loadProtectionStatus()
+
+    return () => {
+      isActive = false
+    }
   }, [])
 
   useEffect(() => {
@@ -136,6 +184,44 @@ function App() {
     }
   }
 
+  const handleProtectionUpdate = async (
+    controls: ProtectionControls,
+  ) => {
+    setIsProtectionLoading(true)
+    setProtectionError(null)
+
+    try {
+      const state = await updateProtectionControls(controls)
+      setProtectionControls(state)
+    } catch (error) {
+      setProtectionError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to update browser protection settings.',
+      )
+    } finally {
+      setIsProtectionLoading(false)
+    }
+  }
+
+  const handleWebRTCChange = (value: WebRTCProtectionLevel) => {
+    if (!protectionControls) return
+
+    void handleProtectionUpdate({
+      ...protectionControls,
+      webRTCProtection: value,
+    })
+  }
+
+  const handleThirdPartyCookiesChange = (checked: boolean) => {
+    if (!protectionControls) return
+
+    void handleProtectionUpdate({
+      ...protectionControls,
+      blockThirdPartyCookies: checked,
+    })
+  }
+
   const handleResetSettings = async () => {
     try {
       const defaultSettings = await resetStoredSettings()
@@ -165,6 +251,9 @@ function App() {
           privacyProtection={settings.privacyProtection}
           isCustomLocation={profile === 'custom-location'}
           expectedCountryCode={settings.expectedCountryCode}
+          protectionControls={protectionControls}
+          isProtectionLoading={isProtectionLoading}
+          protectionError={protectionError}
           onNotificationsChange={(checked) =>
             void updateSetting('notifications', checked)
           }
@@ -177,6 +266,8 @@ function App() {
           onExpectedCountryChange={(countryCode) =>
             void updateExpectedCountry(countryCode)
           }
+          onWebRTCChange={handleWebRTCChange}
+          onThirdPartyCookiesChange={handleThirdPartyCookiesChange}
           onReset={() => void handleResetSettings()}
         />
       ) : (

@@ -2,7 +2,7 @@ import { networkApiResponseSchema } from '@/modules/network/network.schema'
 import type { NetworkApiResponse } from '@/modules/network/network.types'
 
 const NETWORK_API_URL = 'https://ipwho.is/'
-const REQUEST_TIMEOUT = 10_000
+const REQUEST_TIMEOUT = 20_000
 
 export async function fetchNetworkData(): Promise<NetworkApiResponse> {
   const response = await fetch(NETWORK_API_URL, {

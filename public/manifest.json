@@ -4,10 +4,11 @@
   "name": "Privacy Guard",
   "version": "1.0.0",
   "description": "Monitor network privacy, detect potential leaks, and manage browser privacy settings.",
-  "permissions": [
-    "storage",
-    "alarms"
-  ],
+"permissions": [
+  "storage",
+  "alarms",
+  "privacy"
+],
   "host_permissions": [
     "https://ipwho.is/*"
   ],
