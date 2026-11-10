@@ -1,7 +1,10 @@
-
 import { ShieldCheck, Settings } from 'lucide-react'
 
-function PopupHeader() {
+interface PopupHeaderProps {
+  onSettingsClick: () => void
+}
+
+function PopupHeader({ onSettingsClick }: PopupHeaderProps) {
   return (
     <header className="flex items-center justify-between border-b px-4 py-3">
       <div className="flex items-center gap-2">
@@ -17,6 +20,7 @@ function PopupHeader() {
 
       <button
         type="button"
+        onClick={onSettingsClick}
         className="rounded-md p-2 transition-colors hover:bg-muted"
         aria-label="Settings"
       >

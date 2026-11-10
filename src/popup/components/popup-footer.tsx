@@ -1,6 +1,10 @@
 import { ExternalLink } from 'lucide-react'
 
-function PopupFooter() {
+interface PopupFooterProps {
+  onSettingsClick: () => void
+}
+
+function PopupFooter({ onSettingsClick }: PopupFooterProps) {
   return (
     <footer className="flex items-center justify-between border-t px-4 py-3">
       <span className="text-xs text-muted-foreground">
@@ -9,6 +13,7 @@ function PopupFooter() {
 
       <button
         type="button"
+        onClick={onSettingsClick}
         className="flex items-center gap-1 text-xs text-primary transition-opacity hover:opacity-80"
       >
         Open Settings
