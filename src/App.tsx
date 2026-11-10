@@ -6,10 +6,13 @@ import PopupFooter from '@/popup/components/popup-footer'
 import VPNStatus from '@/popup/components/vpn-status'
 import NetworkInfo from '@/popup/components/network-info'
 import PrivacyChecks from '@/popup/components/privacy-checks'
-import ProfileSelector, {
-  type ProtectionProfile,
-} from '@/popup/components/profile-selector'
+import ProfileSelector from '@/popup/components/profile-selector'
 import SettingsPage from '@/popup/pages/settings-page'
+
+import {
+  DEFAULT_PROFILE,
+  type ProtectionProfile,
+} from '@/modules/profiles/profile.types'
 
 import {
   DEFAULT_SETTINGS,
@@ -19,25 +22,35 @@ import {
   type AppSettings,
 } from '@/services/storage/settings-storage'
 
+import {
+  getProfile,
+  saveProfile,
+} from '@/services/storage/profile-storage'
+
 function App() {
-  const [profile, setProfile] = useState<ProtectionProfile>('basic')
+  const [profile, setProfile] = useState<ProtectionProfile>(DEFAULT_PROFILE)
   const [currentPage, setCurrentPage] = useState<'home' | 'settings'>('home')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
-  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false)
+  const [isDataLoaded, setIsDataLoaded] = useState(false)
 
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadAppData = async () => {
       try {
-        const storedSettings = await getSettings()
+        const [storedSettings, storedProfile] = await Promise.all([
+          getSettings(),
+          getProfile(),
+        ])
+
         setSettings(storedSettings)
+        setProfile(storedProfile)
       } catch (error) {
-        console.error('Failed to load settings:', error)
+        console.error('Failed to load app data:', error)
       } finally {
-        setIsSettingsLoaded(true)
+        setIsDataLoaded(true)
       }
     }
 
-    void loadSettings()
+    void loadAppData()
   }, [])
 
   const updateSetting = async (
@@ -58,6 +71,16 @@ function App() {
     }
   }
 
+  const updateProfile = async (newProfile: ProtectionProfile) => {
+    setProfile(newProfile)
+
+    try {
+      await saveProfile(newProfile)
+    } catch (error) {
+      console.error('Failed to save profile:', error)
+    }
+  }
+
   const handleResetSettings = async () => {
     try {
       const defaultSettings = await resetStoredSettings()
@@ -67,31 +90,35 @@ function App() {
     }
   }
 
+  if (!isDataLoaded) {
+    return (
+      <PopupLayout>
+        <div className="p-6 text-center text-sm text-muted-foreground">
+          Loading Privacy Guard...
+        </div>
+      </PopupLayout>
+    )
+  }
+
   return (
     <PopupLayout>
       {currentPage === 'settings' ? (
-        isSettingsLoaded ? (
-          <SettingsPage
-            onBack={() => setCurrentPage('home')}
-            notifications={settings.notifications}
-            locationProtection={settings.locationProtection}
-            privacyProtection={settings.privacyProtection}
-            onNotificationsChange={(checked) =>
-              void updateSetting('notifications', checked)
-            }
-            onLocationProtectionChange={(checked) =>
-              void updateSetting('locationProtection', checked)
-            }
-            onPrivacyProtectionChange={(checked) =>
-              void updateSetting('privacyProtection', checked)
-            }
-            onReset={() => void handleResetSettings()}
-          />
-        ) : (
-          <div className="p-6 text-center text-sm text-muted-foreground">
-            Loading settings...
-          </div>
-        )
+        <SettingsPage
+          onBack={() => setCurrentPage('home')}
+          notifications={settings.notifications}
+          locationProtection={settings.locationProtection}
+          privacyProtection={settings.privacyProtection}
+          onNotificationsChange={(checked) =>
+            void updateSetting('notifications', checked)
+          }
+          onLocationProtectionChange={(checked) =>
+            void updateSetting('locationProtection', checked)
+          }
+          onPrivacyProtectionChange={(checked) =>
+            void updateSetting('privacyProtection', checked)
+          }
+          onReset={() => void handleResetSettings()}
+        />
       ) : (
         <>
           <PopupHeader
@@ -105,7 +132,7 @@ function App() {
 
             <ProfileSelector
               value={profile}
-              onChange={setProfile}
+              onChange={(newProfile) => void updateProfile(newProfile)}
             />
           </div>
 
