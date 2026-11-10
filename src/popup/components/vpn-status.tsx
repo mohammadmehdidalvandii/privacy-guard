@@ -1,34 +1,41 @@
+import { ShieldCheck, ShieldAlert, ShieldQuestion } from 'lucide-react'
 
-import { ShieldCheck, ShieldAlert } from 'lucide-react'
-
-type VPNStatusType = 'connected' | 'disconnected' | 'unknown'
+import type { VPNStatus as VPNStatusType } from '@/modules/vpn/vpn.types'
 
 interface VPNStatusProps {
-  status?: VPNStatusType
+  status: VPNStatusType
 }
 
-function VPNStatus({ status = 'unknown' }: VPNStatusProps) {
-  const statusConfig = {
-    connected: {
-      label: 'VPN Connected',
-      description: 'Your VPN connection is active.',
-      icon: ShieldCheck,
-      className: 'text-green-500 bg-green-500/10',
-    },
-    disconnected: {
-      label: 'VPN Disconnected',
-      description: 'Your VPN connection is not active.',
-      icon: ShieldAlert,
-      className: 'text-red-500 bg-red-500/10',
-    },
-    unknown: {
-      label: 'Status Unknown',
-      description: 'Unable to determine VPN status.',
-      icon: ShieldAlert,
-      className: 'text-yellow-500 bg-yellow-500/10',
-    },
+const statusConfig = {
+  possible: {
+    label: 'Possible VPN Detected',
+    description: 'Your public IP address has changed.',
+    icon: ShieldCheck,
+    className: 'text-green-500 bg-green-500/10',
+  },
+  unchanged: {
+    label: 'No IP Change Detected',
+    description: 'Your public IP address has not changed.',
+    icon: ShieldAlert,
+    className: 'text-yellow-500 bg-yellow-500/10',
+  },
+  unknown: {
+    label: 'Status Unknown',
+    description: 'Not enough information to determine network changes.',
+    icon: ShieldQuestion,
+    className: 'text-muted-foreground bg-muted',
+  },
+} satisfies Record<
+  VPNStatusType,
+  {
+    label: string
+    description: string
+    icon: typeof ShieldCheck
+    className: string
   }
+>
 
+function VPNStatus({ status }: VPNStatusProps) {
   const config = statusConfig[status]
   const Icon = config.icon
 

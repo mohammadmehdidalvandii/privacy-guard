@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import PopupLayout from '@/popup/layouts/popup-layout'
 import PopupHeader from '@/popup/components/popup-header'
@@ -27,11 +28,22 @@ import {
   saveProfile,
 } from '@/services/storage/profile-storage'
 
+import { getVPNState } from '@/services/storage/vpn-storage'
+import { requestVPNStatus } from '@/services/messaging/vpn-messaging'
+
 function App() {
+  const queryClient = useQueryClient()
+
   const [profile, setProfile] = useState<ProtectionProfile>(DEFAULT_PROFILE)
   const [currentPage, setCurrentPage] = useState<'home' | 'settings'>('home')
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
+
+  const { data: vpnState } = useQuery({
+    queryKey: ['vpn-state'],
+    queryFn: getVPNState,
+    refetchInterval: 30_000,
+  })
 
   useEffect(() => {
     const loadAppData = async () => {
@@ -52,6 +64,28 @@ function App() {
 
     void loadAppData()
   }, [])
+
+  useEffect(() => {
+    let isActive = true
+
+    const checkVPN = async () => {
+      try {
+        const state = await requestVPNStatus()
+
+        if (isActive) {
+          queryClient.setQueryData(['vpn-state'], state)
+        }
+      } catch (error) {
+        console.error('Immediate VPN check failed:', error)
+      }
+    }
+
+    void checkVPN()
+
+    return () => {
+      isActive = false
+    }
+  }, [queryClient])
 
   const updateSetting = async (
     key: keyof AppSettings,
@@ -126,7 +160,7 @@ function App() {
           />
 
           <div className="space-y-5 p-4">
-            <VPNStatus status="unknown" />
+            <VPNStatus status={vpnState?.status ?? 'unknown'} />
             <NetworkInfo />
             <PrivacyChecks />
 
