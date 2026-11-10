@@ -1,7 +1,11 @@
 
 function App() {
   return (
-    <div>App</div>
+    <main className="min-h-screen w-full">
+      <div id="popup-container">
+         Popup content 
+      </div>
+    </main>
   )
 }
 
