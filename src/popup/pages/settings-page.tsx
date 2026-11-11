@@ -1,4 +1,3 @@
-
 import {
   ArrowLeft,
   Bell,
@@ -47,6 +46,7 @@ interface SettingToggleProps {
   label: string
   description: string
   checked: boolean
+  disabled?: boolean
   onChange: (checked: boolean) => void
 }
 
@@ -54,6 +54,7 @@ function SettingToggle({
   label,
   description,
   checked,
+  disabled = false,
   onChange,
 }: SettingToggleProps) {
   return (
@@ -66,6 +67,7 @@ function SettingToggle({
       <Switch
         checked={checked}
         onCheckedChange={onChange}
+        disabled={disabled}
         aria-label={label}
       />
     </div>

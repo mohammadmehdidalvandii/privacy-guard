@@ -45,7 +45,7 @@ async function isExtensionEnabled(): Promise<boolean> {
   return settings.enabled
 }
 
-async function runVPNMonitor() {
+async function runVPNMonitor(): Promise<void> {
   try {
     if (!(await isExtensionEnabled())) return
 
@@ -56,7 +56,7 @@ async function runVPNMonitor() {
   }
 }
 
-function startVPNMonitoring() {
+function startVPNMonitoring(): void {
   chrome.alarms.create(VPN_MONITOR_ALARM, {
     periodInMinutes: 5,
   })
@@ -64,7 +64,7 @@ function startVPNMonitoring() {
   void runVPNMonitor()
 }
 
-async function syncExtensionState() {
+async function syncExtensionState(): Promise<void> {
   if (await isExtensionEnabled()) {
     startVPNMonitoring()
   } else {

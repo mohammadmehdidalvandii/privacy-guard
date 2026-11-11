@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -60,9 +59,9 @@ function App() {
 
   const [profile, setProfile] = useState<ProtectionProfile>(DEFAULT_PROFILE);
 
-  const [currentPage, setCurrentPage] = useState<
-    "home" | "settings" | "guide"
-  >("home");
+  const [currentPage, setCurrentPage] = useState<"home" | "settings" | "guide">(
+    "home",
+  );
 
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -265,10 +264,7 @@ function App() {
     }
   };
 
-  const updateSetting = async (
-    key: "notifications",
-    checked: boolean,
-  ) => {
+  const updateSetting = async (key: "notifications", checked: boolean) => {
     const updatedSettings: AppSettings = {
       ...settings,
       [key]: checked,
@@ -521,9 +517,7 @@ function App() {
                 <ProtectionOverview controls={protectionControls} />
               </div>
 
-              <PopupFooter
-                onSettingsClick={() => setCurrentPage("settings")}
-              />
+              <PopupFooter onSettingsClick={() => setCurrentPage("settings")} />
             </>
           ) : (
             <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-6 text-center">
