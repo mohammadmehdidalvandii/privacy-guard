@@ -3,11 +3,17 @@ import {
   ShieldAlert,
   ShieldQuestion,
   Fingerprint,
+  MapPin,
+  Clock,
 } from 'lucide-react'
 
 import type { WebRTCAnalysis } from '@/modules/webrtc/webrtc.types'
 import type { DNSLeakResult } from '@/modules/dns/dns.types'
 import type { FingerprintResult } from '@/modules/fingerprint/fingerprint.types'
+import type {
+  GeolocationResult,
+  TimezoneConsistencyResult,
+} from '@/modules/geolocation/geolocation.types'
 
 interface PrivacyChecksProps {
   webRTCAnalysis?: WebRTCAnalysis
@@ -20,6 +26,11 @@ interface PrivacyChecksProps {
   isFingerprintLoading: boolean
   fingerprintError: string | null
   onRunFingerprintScan: () => void
+  geolocationResult?: GeolocationResult
+  isGeolocationLoading: boolean
+  geolocationError: string | null
+  onRunGeolocationScan: () => void
+  timezoneConsistency: TimezoneConsistencyResult
 }
 
 function PrivacyChecks({
@@ -33,6 +44,11 @@ function PrivacyChecks({
   isFingerprintLoading,
   fingerprintError,
   onRunFingerprintScan,
+  geolocationResult,
+  isGeolocationLoading,
+  geolocationError,
+  onRunGeolocationScan,
+  timezoneConsistency,
 }: PrivacyChecksProps) {
   const webRTCCheck = (() => {
     if (isWebRTCLoading) {
@@ -113,21 +129,109 @@ function PrivacyChecks({
     }
   })()
 
+  const geolocationCheck = (() => {
+    if (isGeolocationLoading) {
+      return {
+        description: 'Checking geolocation permission...',
+        status: 'checking',
+      }
+    }
+
+    if (geolocationError) {
+      return {
+        description: geolocationError,
+        status: 'unknown',
+      }
+    }
+
+    if (!geolocationResult) {
+      return {
+        description: 'Not tested yet',
+        status: 'pending',
+      }
+    }
+
+    if (!geolocationResult.available) {
+      return {
+        description: 'Geolocation API unavailable',
+        status: 'unknown',
+      }
+    }
+
+    switch (geolocationResult.permission) {
+      case 'granted':
+        return {
+          description: 'Location access is granted to this site',
+          status: 'warning',
+        }
+      case 'prompt':
+        return {
+          description: 'This site may request location access',
+          status: 'checking',
+        }
+      case 'denied':
+        return {
+          description: 'Location access is denied',
+          status: 'protected',
+        }
+      default:
+        return {
+          description: 'Geolocation permission status unknown',
+          status: 'unknown',
+        }
+    }
+  })()
+
+  const timezoneCheck = (() => {
+    switch (timezoneConsistency.status) {
+      case 'match':
+        return {
+          description: `Browser and network timezone match: ${timezoneConsistency.browserTimezone}`,
+          status: 'protected',
+        }
+      case 'mismatch':
+        return {
+          description: `Browser: ${timezoneConsistency.browserTimezone} · Network: ${timezoneConsistency.networkTimezone}`,
+          status: 'warning',
+        }
+      default:
+        return {
+          description: 'Timezone information unavailable',
+          status: 'unknown',
+        }
+    }
+  })()
+
   const checks = [
     {
       id: 'webrtc',
       label: 'WebRTC Leak',
+      icon: ShieldQuestion,
       ...webRTCCheck,
     },
     {
       id: 'dns',
       label: 'DNS Leak',
+      icon: ShieldQuestion,
       ...dnsCheck,
     },
     {
       id: 'fingerprint',
       label: 'Browser Fingerprinting',
+      icon: Fingerprint,
       ...fingerprintCheck,
+    },
+    {
+      id: 'geolocation',
+      label: 'Geolocation Exposure',
+      icon: MapPin,
+      ...geolocationCheck,
+    },
+    {
+      id: 'timezone',
+      label: 'Timezone Consistency',
+      icon: Clock,
+      ...timezoneCheck,
     },
   ]
 
@@ -168,7 +272,8 @@ function PrivacyChecks({
           const config =
             statusConfig[check.status as keyof typeof statusConfig]
 
-          const Icon = config.icon
+          const StatusIcon = config.icon
+          const CheckIcon = check.icon
 
           return (
             <div
@@ -176,7 +281,7 @@ function PrivacyChecks({
               className="flex items-center justify-between gap-3 rounded-lg border p-3"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <Icon className={`size-5 shrink-0 ${config.className}`} />
+                <CheckIcon className={`size-5 shrink-0 ${config.className}`} />
 
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{check.label}</p>
@@ -187,6 +292,8 @@ function PrivacyChecks({
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
+                <StatusIcon className={`size-4 ${config.className}`} />
+
                 <span className={`text-xs font-medium ${config.className}`}>
                   {config.label}
                 </span>
@@ -201,6 +308,21 @@ function PrivacyChecks({
                     {isFingerprintLoading
                       ? 'Scanning...'
                       : fingerprintResult
+                        ? 'Rescan'
+                        : 'Scan'}
+                  </button>
+                )}
+
+                {check.id === 'geolocation' && (
+                  <button
+                    type="button"
+                    onClick={onRunGeolocationScan}
+                    disabled={isGeolocationLoading}
+                    className="rounded-md border px-2 py-1 text-xs font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isGeolocationLoading
+                      ? 'Checking...'
+                      : geolocationResult
                         ? 'Rescan'
                         : 'Scan'}
                   </button>

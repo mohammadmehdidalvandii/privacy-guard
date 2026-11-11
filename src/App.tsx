@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -13,7 +12,9 @@ import PrivacyChecks from "@/popup/components/privacy-checks";
 import ProfileSelector from "@/popup/components/profile-selector";
 import ProtectionOverview from "@/popup/components/protection-overview";
 import SettingsPage from "@/popup/pages/settings-page";
+
 import { requestFingerprintScan } from "@/services/messaging/fingerprint-messaging";
+import { requestGeolocationScan } from "@/services/messaging/geolocation-messaging";
 
 import { analyzeProvider } from "@/modules/vpn/vpn-analyzer";
 import {
@@ -22,6 +23,7 @@ import {
 } from "@/modules/profiles/profile.types";
 import { getNetworkInfo } from "@/modules/network/network.service";
 import { analyzeWebRTC } from "@/modules/webrtc/webrtc.service";
+import type { TimezoneConsistencyResult } from "@/modules/geolocation/geolocation.types";
 
 import {
   DEFAULT_SETTINGS,
@@ -106,6 +108,26 @@ function App() {
   const fingerprintMutation = useMutation({
     mutationFn: requestFingerprintScan,
   });
+
+  const geolocationMutation = useMutation({
+    mutationFn: requestGeolocationScan,
+  });
+
+  const browserTimezone =
+    Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown";
+
+  const networkTimezone = networkInfo?.timezone ?? "Unknown";
+
+  const timezoneConsistency: TimezoneConsistencyResult = {
+    browserTimezone,
+    networkTimezone,
+    status:
+      browserTimezone === "Unknown" || networkTimezone === "Unknown"
+        ? "unknown"
+        : browserTimezone === networkTimezone
+          ? "match"
+          : "mismatch",
+  };
 
   useEffect(() => {
     const loadAppData = async () => {
@@ -405,6 +427,11 @@ function App() {
               isFingerprintLoading={fingerprintMutation.isPending}
               fingerprintError={fingerprintMutation.error?.message ?? null}
               onRunFingerprintScan={() => fingerprintMutation.mutate()}
+              geolocationResult={geolocationMutation.data}
+              isGeolocationLoading={geolocationMutation.isPending}
+              geolocationError={geolocationMutation.error?.message ?? null}
+              onRunGeolocationScan={() => geolocationMutation.mutate()}
+              timezoneConsistency={timezoneConsistency}
             />
 
             <ProfileSelector
@@ -422,4 +449,4 @@ function App() {
   );
 }
 
-export default App
+export default App;

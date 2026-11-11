@@ -1,8 +1,10 @@
+
 import { z } from 'zod'
 
 import { checkVPNStatus } from '@/modules/vpn/vpn.service'
 import { runDNSLeakTest } from '@/modules/dns/dns.service'
 import { runFingerprintScan } from '@/modules/fingerprint/fingerprint.service'
+import { runGeolocationScan } from '@/modules/geolocation/geolocation.service'
 
 import {
   applyProtectionControls,
@@ -20,6 +22,7 @@ const UPDATE_PROTECTION_CONTROLS = 'UPDATE_PROTECTION_CONTROLS'
 const APPLY_PROTECTION_PROFILE = 'APPLY_PROTECTION_PROFILE'
 const RUN_DNS_LEAK_TEST = 'RUN_DNS_LEAK_TEST'
 const RUN_FINGERPRINT_SCAN = 'RUN_FINGERPRINT_SCAN'
+const RUN_GEOLOCATION_SCAN = 'RUN_GEOLOCATION_SCAN'
 
 const profileSchema = z.enum([
   'basic',
@@ -109,6 +112,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             error instanceof Error
               ? error.message
               : 'Fingerprint scan failed.',
+        })
+      })
+
+    return true
+  }
+
+  if (message?.type === RUN_GEOLOCATION_SCAN) {
+    runGeolocationScan()
+      .then((result) => {
+        sendResponse({ success: true, data: result })
+      })
+      .catch((error: unknown) => {
+        sendResponse({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Geolocation scan failed.',
         })
       })
 
