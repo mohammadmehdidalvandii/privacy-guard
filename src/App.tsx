@@ -6,6 +6,7 @@ import PopupHeader from '@/popup/components/popup-header'
 import PopupFooter from '@/popup/components/popup-footer'
 import VPNStatus from '@/popup/components/vpn-status'
 import NetworkInfo from '@/popup/components/network-info'
+import WebRTCStatus from '@/popup/components/webrtc-status'
 import PrivacyChecks from '@/popup/components/privacy-checks'
 import ProfileSelector from '@/popup/components/profile-selector'
 import ProtectionOverview from '@/popup/components/protection-overview'
@@ -17,6 +18,8 @@ import {
 } from '@/modules/profiles/profile.types'
 
 import { getProfileConfig } from '@/modules/profiles/profile.service'
+import { getNetworkInfo } from '@/modules/network/network.service'
+import { analyzeWebRTC } from '@/modules/webrtc/webrtc.service'
 
 import {
   DEFAULT_SETTINGS,
@@ -64,6 +67,35 @@ function App() {
     queryKey: ['vpn-state'],
     queryFn: getVPNState,
     refetchInterval: 30_000,
+  })
+
+  const { data: networkInfo } = useQuery({
+    queryKey: ['network-info'],
+    queryFn: getNetworkInfo,
+    enabled: currentPage === 'home',
+    staleTime: 60_000,
+    retry: 2,
+  })
+
+  const {
+    data: webRTCAnalysis,
+    isLoading: isWebRTCLoading,
+    error: webRTCError,
+  } = useQuery({
+    queryKey: ['webrtc-analysis', networkInfo?.ip],
+    queryFn: () => {
+      if (!networkInfo?.ip || networkInfo.ip === 'Unknown') {
+        throw new Error('A valid public IP address is required.')
+      }
+
+      return analyzeWebRTC(networkInfo.ip)
+    },
+    enabled:
+      currentPage === 'home' &&
+      Boolean(networkInfo?.ip && networkInfo.ip !== 'Unknown'),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: false,
   })
 
   useEffect(() => {
@@ -280,6 +312,12 @@ function App() {
             <VPNStatus status={vpnState?.status ?? 'unknown'} />
 
             <NetworkInfo />
+
+            <WebRTCStatus
+              analysis={webRTCAnalysis}
+              isLoading={isWebRTCLoading}
+              error={webRTCError?.message ?? null}
+            />
 
             <PrivacyChecks />
 

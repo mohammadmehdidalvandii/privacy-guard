@@ -1,16 +1,16 @@
-
 {
   "manifest_version": 3,
   "name": "Privacy Guard",
   "version": "1.0.0",
   "description": "Monitor network privacy, detect potential leaks, and manage browser privacy settings.",
-"permissions": [
-  "storage",
-  "alarms",
-  "privacy"
-],
+  "permissions": [
+    "storage",
+    "alarms",
+    "privacy"
+  ],
   "host_permissions": [
-    "https://ipwho.is/*"
+    "https://api.ipify.org/*",
+    "https://ipapi.co/*"
   ],
   "background": {
     "service_worker": "background.js",

@@ -10,20 +10,17 @@ export interface NetworkInfo {
   asn: number | null
 }
 
+export interface IpifyResponse {
+  ip: string
+}
+
 export interface NetworkApiResponse {
-  success: boolean
   ip?: string
-  type?: string
+  version?: string
   country?: string
+  country_name?: string
   city?: string
-  timezone?: {
-    id?: string
-  }
-  connection?: {
-    asn?: number
-    org?: string
-    isp?: string
-    domain?: string
-  }
-  message?: string
+  timezone?: string
+  asn?: string
+  org?: string
 }
