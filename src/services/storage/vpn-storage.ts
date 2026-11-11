@@ -1,11 +1,17 @@
+
 import type { VPNMonitorState } from '@/modules/vpn/vpn.types'
 
 const STORAGE_KEY = 'privacy-guard-vpn-state'
 
 export const DEFAULT_VPN_STATE: VPNMonitorState = {
   status: 'unknown',
+  confidence: 'low',
+  score: 0,
+  evidence: [],
   currentIp: null,
   previousIp: null,
+  currentAsn: null,
+  currentOrganization: null,
   lastCheckedAt: null,
   lastChangedAt: null,
 }

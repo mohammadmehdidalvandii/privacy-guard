@@ -1,4 +1,9 @@
-import { ShieldCheck, ShieldAlert, ShieldQuestion } from 'lucide-react'
+import {
+  ShieldCheck,
+  ShieldAlert,
+  ShieldQuestion,
+  ShieldX,
+} from 'lucide-react'
 
 import type { VPNStatus as VPNStatusType } from '@/modules/vpn/vpn.types'
 
@@ -7,21 +12,27 @@ interface VPNStatusProps {
 }
 
 const statusConfig = {
-  possible: {
-    label: 'Possible VPN Detected',
-    description: 'Your public IP address has changed.',
+  likely: {
+    label: 'VPN Likely Detected',
+    description: 'Multiple network signals suggest VPN usage.',
     icon: ShieldCheck,
     className: 'text-green-500 bg-green-500/10',
   },
-  unchanged: {
-    label: 'No IP Change Detected',
-    description: 'Your public IP address has not changed.',
+  possible: {
+    label: 'Possible VPN Detected',
+    description: 'Some network signals suggest VPN usage.',
     icon: ShieldAlert,
     className: 'text-yellow-500 bg-yellow-500/10',
   },
+  'not-detected': {
+    label: 'VPN Not Detected',
+    description: 'No significant VPN indicators were detected.',
+    icon: ShieldX,
+    className: 'text-muted-foreground bg-muted',
+  },
   unknown: {
     label: 'Status Unknown',
-    description: 'Not enough information to determine network changes.',
+    description: 'Not enough information to analyze your connection.',
     icon: ShieldQuestion,
     className: 'text-muted-foreground bg-muted',
   },

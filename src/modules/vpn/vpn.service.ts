@@ -4,6 +4,9 @@ import {
   saveVPNState,
 } from '@/services/storage/vpn-storage'
 
+import { analyzeProvider } from './vpn-analyzer'
+import { scoreVPNSignals } from './vpn-scorer'
+
 import type { VPNMonitorState } from './vpn.types'
 
 export async function checkVPNStatus(): Promise<VPNMonitorState> {
@@ -21,17 +24,21 @@ export async function checkVPNStatus(): Promise<VPNMonitorState> {
     const hasIpChanged =
       previousIp !== null && previousIp !== currentIp
 
+    const providerAnalysis = analyzeProvider(networkInfo)
+
+    const scoring = scoreVPNSignals({
+      hasIpChanged,
+      isHostingProvider: providerAnalysis.isHostingProvider,
+    })
+
     const now = Date.now()
 
     const nextState: VPNMonitorState = {
-      status:
-        previousIp === null
-          ? 'unknown'
-          : hasIpChanged
-            ? 'possible'
-            : 'unchanged',
+      ...scoring,
       currentIp,
       previousIp,
+      currentAsn: networkInfo.asn,
+      currentOrganization: networkInfo.organization,
       lastCheckedAt: now,
       lastChangedAt: hasIpChanged
         ? now
@@ -45,6 +52,7 @@ export async function checkVPNStatus(): Promise<VPNMonitorState> {
     const nextState: VPNMonitorState = {
       ...previousState,
       status: 'unknown',
+      confidence: 'low',
       lastCheckedAt: Date.now(),
     }
 
