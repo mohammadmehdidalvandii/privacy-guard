@@ -12,6 +12,7 @@ import PrivacyChecks from "@/popup/components/privacy-checks";
 import ProfileSelector from "@/popup/components/profile-selector";
 import ProtectionOverview from "@/popup/components/protection-overview";
 import SettingsPage from "@/popup/pages/settings-page";
+import { requestFingerprintScan } from "@/services/messaging/fingerprint-messaging";
 
 import { analyzeProvider } from "@/modules/vpn/vpn-analyzer";
 import {
@@ -46,7 +47,6 @@ import {
   requestProtectionStatus,
   updateProtectionControls,
 } from "@/services/messaging/protection-messaging";
-
 function App() {
   const queryClient = useQueryClient();
 
@@ -98,6 +98,10 @@ function App() {
 
   const dnsTestMutation = useMutation({
     mutationFn: requestDNSLeakTest,
+  });
+
+  const fingerprintMutation = useMutation({
+    mutationFn: requestFingerprintScan,
   });
 
   useEffect(() => {
@@ -175,10 +179,7 @@ function App() {
     };
   }, [queryClient]);
 
-  const updateSetting = async (
-    key: "notifications",
-    checked: boolean,
-  ) => {
+  const updateSetting = async (key: "notifications", checked: boolean) => {
     const updatedSettings: AppSettings = {
       ...settings,
       [key]: checked,
@@ -319,15 +320,12 @@ function App() {
     }
   };
 
-  const providerAnalysis = networkInfo
-    ? analyzeProvider(networkInfo)
-    : null;
+  const providerAnalysis = networkInfo ? analyzeProvider(networkInfo) : null;
 
   const displayVPNStatus =
-    providerAnalysis?.isHostingProvider &&
-    webRTCAnalysis?.hasPublicIpMismatch
+    providerAnalysis?.isHostingProvider && webRTCAnalysis?.hasPublicIpMismatch
       ? "possible"
-      : vpnState?.status ?? "unknown";
+      : (vpnState?.status ?? "unknown");
 
   if (!isDataLoaded) {
     return (
@@ -390,6 +388,10 @@ function App() {
               dnsResult={dnsTestMutation.data}
               isDNSLoading={dnsTestMutation.isPending}
               dnsError={dnsTestMutation.error?.message ?? null}
+              fingerprintResult={fingerprintMutation.data}
+              isFingerprintLoading={fingerprintMutation.isPending}
+              fingerprintError={fingerprintMutation.error?.message ?? null}
+              onRunFingerprintScan={() => fingerprintMutation.mutate()}
             />
 
             <ProfileSelector

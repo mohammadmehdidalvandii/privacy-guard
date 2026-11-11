@@ -1,4 +1,3 @@
-
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -24,10 +23,11 @@ export default defineConfig({
       },
 
       output: {
-        entryFileNames: (chunk) =>
-          chunk.name === 'background'
-            ? 'background.js'
-            : 'assets/[name]-[hash].js',
+        entryFileNames: (chunk) => {
+          if (chunk.name === 'background') return 'background.js'
+
+          return 'assets/[name]-[hash].js'
+        },
       },
     },
   },

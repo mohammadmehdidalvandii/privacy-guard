@@ -1,5 +1,8 @@
+import { z } from 'zod'
+
 import { checkVPNStatus } from '@/modules/vpn/vpn.service'
 import { runDNSLeakTest } from '@/modules/dns/dns.service'
+import { runFingerprintScan } from '@/modules/fingerprint/fingerprint.service'
 
 import {
   applyProtectionControls,
@@ -8,7 +11,6 @@ import {
 
 import { protectionControlsSchema } from '@/modules/protection/protection.schema'
 import { getProfileProtectionControls } from '@/modules/profiles/profile.service'
-import { z } from 'zod'
 
 const VPN_MONITOR_ALARM = 'privacy-guard-vpn-monitor'
 
@@ -17,6 +19,7 @@ const GET_PROTECTION_STATUS = 'GET_PROTECTION_STATUS'
 const UPDATE_PROTECTION_CONTROLS = 'UPDATE_PROTECTION_CONTROLS'
 const APPLY_PROTECTION_PROFILE = 'APPLY_PROTECTION_PROFILE'
 const RUN_DNS_LEAK_TEST = 'RUN_DNS_LEAK_TEST'
+const RUN_FINGERPRINT_SCAN = 'RUN_FINGERPRINT_SCAN'
 
 const profileSchema = z.enum([
   'basic',
@@ -88,6 +91,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             error instanceof Error
               ? error.message
               : 'DNS leak test failed.',
+        })
+      })
+
+    return true
+  }
+
+  if (message?.type === RUN_FINGERPRINT_SCAN) {
+    runFingerprintScan()
+      .then((result) => {
+        sendResponse({ success: true, data: result })
+      })
+      .catch((error: unknown) => {
+        sendResponse({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Fingerprint scan failed.',
         })
       })
 
