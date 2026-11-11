@@ -1,4 +1,5 @@
 import { checkVPNStatus } from '@/modules/vpn/vpn.service'
+import { runDNSLeakTest } from '@/modules/dns/dns.service'
 
 import {
   applyProtectionControls,
@@ -12,6 +13,7 @@ const VPN_MONITOR_ALARM = 'privacy-guard-vpn-monitor'
 const CHECK_VPN_STATUS = 'CHECK_VPN_STATUS'
 const GET_PROTECTION_STATUS = 'GET_PROTECTION_STATUS'
 const UPDATE_PROTECTION_CONTROLS = 'UPDATE_PROTECTION_CONTROLS'
+const RUN_DNS_LEAK_TEST = 'RUN_DNS_LEAK_TEST'
 
 async function runVPNMonitor() {
   try {
@@ -62,6 +64,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             error instanceof Error
               ? error.message
               : 'VPN status check failed.',
+        })
+      })
+
+    return true
+  }
+
+  if (message?.type === RUN_DNS_LEAK_TEST) {
+    runDNSLeakTest()
+      .then((result) => {
+        sendResponse({
+          success: true,
+          data: result,
+        })
+      })
+      .catch((error: unknown) => {
+        sendResponse({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'DNS leak test failed.',
         })
       })
 

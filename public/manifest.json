@@ -10,7 +10,9 @@
   ],
   "host_permissions": [
     "https://api.ipify.org/*",
-    "https://ipapi.co/*"
+    "https://ipapi.co/*",
+    "https://dnsleak.dev/*",
+    "https://*.t.dnsleak.dev/*"
   ],
   "background": {
     "service_worker": "background.js",
