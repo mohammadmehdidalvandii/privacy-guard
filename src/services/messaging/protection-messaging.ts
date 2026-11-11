@@ -3,6 +3,8 @@ import type {
   ProtectionControlStatus,
 } from '@/modules/protection/protection.types'
 
+import type { ProtectionProfile } from '@/modules/profiles/profile.types'
+
 interface ProtectionResponse<T> {
   success: boolean
   data?: T
@@ -34,6 +36,23 @@ export async function updateProtectionControls(
   if (!response?.success || !response.data) {
     throw new Error(
       response?.error || 'Failed to update protection controls.',
+    )
+  }
+
+  return response.data
+}
+
+export async function applyProtectionProfile(
+  profile: ProtectionProfile,
+): Promise<ProtectionControlStatus> {
+  const response = (await chrome.runtime.sendMessage({
+    type: 'APPLY_PROTECTION_PROFILE',
+    profile,
+  })) as ProtectionResponse<ProtectionControlStatus>
+
+  if (!response?.success || !response.data) {
+    throw new Error(
+      response?.error || 'Failed to apply protection profile.',
     )
   }
 

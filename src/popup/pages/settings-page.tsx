@@ -27,16 +27,12 @@ import ProtectionControls from '@/popup/components/protection-controls'
 interface SettingsPageProps {
   onBack: () => void
   notifications: boolean
-  locationProtection: boolean
-  privacyProtection: boolean
   isCustomLocation: boolean
   expectedCountryCode: string | null
   protectionControls: ProtectionControlStatus | null
   isProtectionLoading: boolean
   protectionError: string | null
   onNotificationsChange: (checked: boolean) => void
-  onLocationProtectionChange: (checked: boolean) => void
-  onPrivacyProtectionChange: (checked: boolean) => void
   onExpectedCountryChange: (countryCode: string | null) => void
   onWebRTCChange: (value: WebRTCProtectionLevel) => void
   onThirdPartyCookiesChange: (checked: boolean) => void
@@ -75,16 +71,12 @@ function SettingToggle({
 function SettingsPage({
   onBack,
   notifications,
-  locationProtection,
-  privacyProtection,
   isCustomLocation,
   expectedCountryCode,
   protectionControls,
   isProtectionLoading,
   protectionError,
   onNotificationsChange,
-  onLocationProtectionChange,
-  onPrivacyProtectionChange,
   onExpectedCountryChange,
   onWebRTCChange,
   onThirdPartyCookiesChange,
@@ -125,20 +117,6 @@ function SettingsPage({
           description="Receive privacy alerts"
           checked={notifications}
           onChange={onNotificationsChange}
-        />
-
-        <SettingToggle
-          label="Location Protection"
-          description="Manage location privacy"
-          checked={locationProtection}
-          onChange={onLocationProtectionChange}
-        />
-
-        <SettingToggle
-          label="Privacy Protection"
-          description="Enable privacy protection controls"
-          checked={privacyProtection}
-          onChange={onPrivacyProtectionChange}
         />
       </section>
 

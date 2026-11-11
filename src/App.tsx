@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import PopupLayout from "@/popup/layouts/popup-layout";
 import PopupHeader from "@/popup/components/popup-header";
 import PopupFooter from "@/popup/components/popup-footer";
@@ -11,14 +12,15 @@ import PrivacyChecks from "@/popup/components/privacy-checks";
 import ProfileSelector from "@/popup/components/profile-selector";
 import ProtectionOverview from "@/popup/components/protection-overview";
 import SettingsPage from "@/popup/pages/settings-page";
+
 import { analyzeProvider } from "@/modules/vpn/vpn-analyzer";
 import {
   DEFAULT_PROFILE,
   type ProtectionProfile,
 } from "@/modules/profiles/profile.types";
-import { getProfileConfig } from "@/modules/profiles/profile.service";
 import { getNetworkInfo } from "@/modules/network/network.service";
 import { analyzeWebRTC } from "@/modules/webrtc/webrtc.service";
+
 import {
   DEFAULT_SETTINGS,
   getSettings,
@@ -26,31 +28,39 @@ import {
   saveSettings,
   type AppSettings,
 } from "@/services/storage/settings-storage";
+
 import { getProfile, saveProfile } from "@/services/storage/profile-storage";
 import { getVPNState } from "@/services/storage/vpn-storage";
+
 import { requestVPNStatus } from "@/services/messaging/vpn-messaging";
 import { requestDNSLeakTest } from "@/services/messaging/dns-messaging";
+
 import type {
   ProtectionControls,
   ProtectionControlStatus,
   WebRTCProtectionLevel,
 } from "@/modules/protection/protection.types";
+
 import {
+  applyProtectionProfile,
   requestProtectionStatus,
   updateProtectionControls,
 } from "@/services/messaging/protection-messaging";
 
 function App() {
   const queryClient = useQueryClient();
+
   const [profile, setProfile] = useState<ProtectionProfile>(DEFAULT_PROFILE);
   const [currentPage, setCurrentPage] = useState<"home" | "settings">("home");
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+
   const [protectionControls, setProtectionControls] =
     useState<ProtectionControlStatus | null>(null);
+
   const [isProtectionLoading, setIsProtectionLoading] = useState(true);
   const [protectionError, setProtectionError] = useState<string | null>(null);
-  const profileConfig = getProfileConfig(profile);
+
   const { data: vpnState } = useQuery({
     queryKey: ["vpn-state"],
     queryFn: getVPNState,
@@ -166,7 +176,7 @@ function App() {
   }, [queryClient]);
 
   const updateSetting = async (
-    key: "notifications" | "locationProtection" | "privacyProtection",
+    key: "notifications",
     checked: boolean,
   ) => {
     const updatedSettings: AppSettings = {
@@ -179,6 +189,7 @@ function App() {
     try {
       await saveSettings(updatedSettings);
     } catch (error) {
+      setSettings(settings);
       console.error("Failed to save settings:", error);
     }
   };
@@ -194,17 +205,55 @@ function App() {
     try {
       await saveSettings(updatedSettings);
     } catch (error) {
+      setSettings(settings);
       console.error("Failed to save expected country:", error);
     }
   };
 
   const updateProfile = async (newProfile: ProtectionProfile) => {
-    setProfile(newProfile);
+    if (newProfile === profile) return;
+
+    const previousControls = protectionControls;
+
+    setIsProtectionLoading(true);
+    setProtectionError(null);
 
     try {
+      const state = await applyProtectionProfile(newProfile);
+
       await saveProfile(newProfile);
+
+      setProfile(newProfile);
+      setProtectionControls(state);
     } catch (error) {
-      console.error("Failed to save profile:", error);
+      try {
+        const restoredState = previousControls
+          ? await updateProtectionControls(previousControls)
+          : await applyProtectionProfile(profile);
+
+        setProtectionControls(restoredState);
+      } catch (rollbackError) {
+        setProtectionControls(null);
+
+        console.error(
+          "Failed to restore previous protection settings:",
+          rollbackError,
+        );
+
+        setProtectionError(
+          "Profile update failed and previous browser settings could not be restored. Please check your protection settings.",
+        );
+
+        return;
+      }
+
+      setProtectionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to apply protection profile.",
+      );
+    } finally {
+      setIsProtectionLoading(false);
     }
   };
 
@@ -245,11 +294,28 @@ function App() {
   };
 
   const handleResetSettings = async () => {
+    setIsProtectionLoading(true);
+    setProtectionError(null);
+
     try {
-      const defaultSettings = await resetStoredSettings();
+      const state = await applyProtectionProfile(DEFAULT_PROFILE);
+
+      const [defaultSettings] = await Promise.all([
+        resetStoredSettings(),
+        saveProfile(DEFAULT_PROFILE),
+      ]);
+
       setSettings(defaultSettings);
+      setProfile(DEFAULT_PROFILE);
+      setProtectionControls(state);
     } catch (error) {
-      console.error("Failed to reset settings:", error);
+      setProtectionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to reset application settings.",
+      );
+    } finally {
+      setIsProtectionLoading(false);
     }
   };
 
@@ -279,8 +345,6 @@ function App() {
         <SettingsPage
           onBack={() => setCurrentPage("home")}
           notifications={settings.notifications}
-          locationProtection={settings.locationProtection}
-          privacyProtection={settings.privacyProtection}
           isCustomLocation={profile === "custom-location"}
           expectedCountryCode={settings.expectedCountryCode}
           protectionControls={protectionControls}
@@ -288,12 +352,6 @@ function App() {
           protectionError={protectionError}
           onNotificationsChange={(checked) =>
             void updateSetting("notifications", checked)
-          }
-          onLocationProtectionChange={(checked) =>
-            void updateSetting("locationProtection", checked)
-          }
-          onPrivacyProtectionChange={(checked) =>
-            void updateSetting("privacyProtection", checked)
           }
           onExpectedCountryChange={(countryCode) =>
             void updateExpectedCountry(countryCode)
@@ -339,7 +397,7 @@ function App() {
               onChange={(newProfile) => void updateProfile(newProfile)}
             />
 
-            <ProtectionOverview config={profileConfig} />
+            <ProtectionOverview controls={protectionControls} />
           </div>
 
           <PopupFooter onSettingsClick={() => setCurrentPage("settings")} />

@@ -7,65 +7,103 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import type { ProtectionProfileConfig } from "@/modules/profiles/profile.types";
+import type { ProtectionControlStatus } from "@/modules/protection/protection.types";
 
 interface ProtectionOverviewProps {
-  config: ProtectionProfileConfig;
+  controls: ProtectionControlStatus | null;
 }
 
-const protectionItems = [
-  {
-    key: "locationProtection",
-    label: "Location Protection",
-    description: "Protect location information",
-    icon: MapPin,
-  },
-  {
-    key: "webrtcProtection",
-    label: "WebRTC Protection",
-    description: "Reduce WebRTC IP exposure",
-    icon: Radio,
-  },
-  {
-    key: "fingerprintProtection",
-    label: "Fingerprint Protection",
-    description: "Limit browser fingerprinting",
-    icon: Fingerprint,
-  },
-  {
-    key: "dnsLeakMonitoring",
-    label: "DNS Leak Monitoring",
-    description: "Monitor potential DNS leaks",
-    icon: Globe,
-  },
-  {
-    key: "blockThirdPartyCookies",
-    label: "Third-party Cookies",
-    description: "Block third-party cookies",
-    icon: Cookie,
-  },
-] as const;
+function ProtectionOverview({ controls }: ProtectionOverviewProps) {
+  const webRTCStatus = controls
+    ? controls.webRTCProtection === "default"
+      ? "Default"
+      : controls.webRTCProtection === "public-only"
+        ? "Protected"
+        : "Enhanced"
+    : "Unknown";
 
-function ProtectionOverview({ config }: ProtectionOverviewProps) {
-  const activeCount = Object.values(config).filter(Boolean).length;
+  const cookieStatus = controls
+    ? controls.blockThirdPartyCookies
+      ? "Blocked"
+      : "Allowed"
+    : "Unknown";
+
+  const activeCount = controls
+    ? Number(controls.webRTCProtection !== "default") +
+      Number(controls.blockThirdPartyCookies)
+    : null;
+
+  const protectionItems = [
+    {
+      key: "location",
+      label: "Location Protection",
+      description: "Location access blocking is not implemented yet",
+      status: "Not implemented",
+      statusClass: "bg-muted text-muted-foreground",
+      icon: MapPin,
+    },
+    {
+      key: "webrtc",
+      label: "WebRTC Protection",
+      description: "Reduce WebRTC IP exposure",
+      status: webRTCStatus,
+      statusClass:
+        webRTCStatus === "Default"
+          ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+          : webRTCStatus === "Unknown"
+            ? "bg-muted text-muted-foreground"
+            : "bg-green-500/10 text-green-600 dark:text-green-400",
+      icon: Radio,
+    },
+    {
+      key: "fingerprint",
+      label: "Fingerprint Protection",
+      description: "Fingerprint protection is not implemented yet",
+      status: "Not implemented",
+      statusClass: "bg-muted text-muted-foreground",
+      icon: Fingerprint,
+    },
+    {
+      key: "dns",
+      label: "DNS Leak Monitoring",
+      description: "DNS leak tests are available on demand",
+      status: "On demand",
+      statusClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+      icon: Globe,
+    },
+    {
+      key: "cookies",
+      label: "Third-party Cookies",
+      description: "Block third-party cookies",
+      status: cookieStatus,
+      statusClass:
+        cookieStatus === "Blocked"
+          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+          : cookieStatus === "Allowed"
+            ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+            : "bg-muted text-muted-foreground",
+      icon: Cookie,
+    },
+  ];
 
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck className="size-4 text-primary" />
-          <h2 className="text-sm font-semibold">Active Protection</h2>
+          <h2 className="text-sm font-semibold">Protection Status</h2>
         </div>
 
         <span className="text-xs text-muted-foreground">
-          {activeCount}/{protectionItems.length} enabled
+          {activeCount === null
+            ? "Loading protections..."
+            : `${activeCount}/2 available protections active`}
         </span>
       </div>
 
       <div className="overflow-hidden rounded-lg border">
         {protectionItems.map((item, index) => {
           const Icon = item.icon;
-          const isActive = config[item.key];
 
           return (
             <div
@@ -81,7 +119,6 @@ function ProtectionOverview({ config }: ProtectionOverviewProps) {
 
                 <div className="min-w-0 space-y-1">
                   <p className="text-sm font-medium">{item.label}</p>
-
                   <p className="text-xs text-muted-foreground">
                     {item.description}
                   </p>
@@ -89,13 +126,9 @@ function ProtectionOverview({ config }: ProtectionOverviewProps) {
               </div>
 
               <span
-                className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${
-                  isActive
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                    : "bg-red-500/10 text-red-600 dark:text-red-400"
-                }`}
+                className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${item.statusClass}`}
               >
-                {isActive ? "Enabled" : "Disabled"}
+                {item.status}
               </span>
             </div>
           );
