@@ -58,3 +58,20 @@ export async function applyProtectionProfile(
 
   return response.data
 }
+
+export async function setExtensionEnabled(
+  enabled: boolean,
+): Promise<boolean> {
+  const response = (await chrome.runtime.sendMessage({
+    type: 'SET_EXTENSION_ENABLED',
+    enabled,
+  })) as ProtectionResponse<boolean>
+
+  if (!response?.success || response.data !== enabled) {
+    throw new Error(
+      response?.error || 'Failed to update extension status.',
+    )
+  }
+
+  return response.data
+}

@@ -1,4 +1,3 @@
-
 import { z } from 'zod'
 
 import { checkVPNStatus } from '@/modules/vpn/vpn.service'
@@ -9,10 +8,19 @@ import { runGeolocationScan } from '@/modules/geolocation/geolocation.service'
 import {
   applyProtectionControls,
   getProtectionControls,
+  resetProtectionControls,
 } from '@/modules/protection/protection.service'
 
 import { protectionControlsSchema } from '@/modules/protection/protection.schema'
 import { getProfileProtectionControls } from '@/modules/profiles/profile.service'
+
+import {
+  clearProtectionSnapshot,
+  getProtectionSnapshot,
+  getSettings,
+  saveProtectionSnapshot,
+  saveSettings,
+} from '@/services/storage/settings-storage'
 
 const VPN_MONITOR_ALARM = 'privacy-guard-vpn-monitor'
 
@@ -23,6 +31,7 @@ const APPLY_PROTECTION_PROFILE = 'APPLY_PROTECTION_PROFILE'
 const RUN_DNS_LEAK_TEST = 'RUN_DNS_LEAK_TEST'
 const RUN_FINGERPRINT_SCAN = 'RUN_FINGERPRINT_SCAN'
 const RUN_GEOLOCATION_SCAN = 'RUN_GEOLOCATION_SCAN'
+const SET_EXTENSION_ENABLED = 'SET_EXTENSION_ENABLED'
 
 const profileSchema = z.enum([
   'basic',
@@ -31,8 +40,15 @@ const profileSchema = z.enum([
   'strict',
 ])
 
+async function isExtensionEnabled(): Promise<boolean> {
+  const settings = await getSettings()
+  return settings.enabled
+}
+
 async function runVPNMonitor() {
   try {
+    if (!(await isExtensionEnabled())) return
+
     const state = await checkVPNStatus()
     console.log('VPN monitoring updated:', state)
   } catch (error) {
@@ -48,13 +64,61 @@ function startVPNMonitoring() {
   void runVPNMonitor()
 }
 
+async function syncExtensionState() {
+  if (await isExtensionEnabled()) {
+    startVPNMonitoring()
+  } else {
+    await chrome.alarms.clear(VPN_MONITOR_ALARM)
+  }
+}
+
+async function setExtensionEnabled(enabled: boolean): Promise<boolean> {
+  const settings = await getSettings()
+
+  if (settings.enabled === enabled) {
+    return enabled
+  }
+
+  if (!enabled) {
+    const currentControls = await getProtectionControls()
+
+    await saveProtectionSnapshot(currentControls)
+    await resetProtectionControls()
+
+    await saveSettings({
+      ...settings,
+      enabled: false,
+    })
+
+    await chrome.alarms.clear(VPN_MONITOR_ALARM)
+
+    return false
+  }
+
+  const snapshot = await getProtectionSnapshot()
+
+  if (snapshot) {
+    await applyProtectionControls(snapshot)
+  }
+
+  await saveSettings({
+    ...settings,
+    enabled: true,
+  })
+
+  await clearProtectionSnapshot()
+  startVPNMonitoring()
+
+  return true
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Privacy Guard installed successfully.')
-  startVPNMonitoring()
+  void syncExtensionState()
 })
 
 chrome.runtime.onStartup.addListener(() => {
-  startVPNMonitoring()
+  void syncExtensionState()
 })
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -64,8 +128,47 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 })
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === SET_EXTENSION_ENABLED) {
+    const enabled = message.enabled
+
+    if (typeof enabled !== 'boolean') {
+      sendResponse({
+        success: false,
+        error: 'Invalid extension status.',
+      })
+
+      return
+    }
+
+    setExtensionEnabled(enabled)
+      .then((state) => {
+        sendResponse({
+          success: true,
+          data: state,
+        })
+      })
+      .catch((error: unknown) => {
+        sendResponse({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to update extension status.',
+        })
+      })
+
+    return true
+  }
+
   if (message?.type === CHECK_VPN_STATUS) {
-    checkVPNStatus()
+    isExtensionEnabled()
+      .then((enabled) => {
+        if (!enabled) {
+          throw new Error('Privacy Guard is disabled.')
+        }
+
+        return checkVPNStatus()
+      })
       .then((state) => {
         sendResponse({ success: true, data: state })
       })
@@ -83,7 +186,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === RUN_DNS_LEAK_TEST) {
-    runDNSLeakTest()
+    isExtensionEnabled()
+      .then((enabled) => {
+        if (!enabled) {
+          throw new Error('Privacy Guard is disabled.')
+        }
+
+        return runDNSLeakTest()
+      })
       .then((result) => {
         sendResponse({ success: true, data: result })
       })
@@ -101,7 +211,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === RUN_FINGERPRINT_SCAN) {
-    runFingerprintScan()
+    isExtensionEnabled()
+      .then((enabled) => {
+        if (!enabled) {
+          throw new Error('Privacy Guard is disabled.')
+        }
+
+        return runFingerprintScan()
+      })
       .then((result) => {
         sendResponse({ success: true, data: result })
       })
@@ -119,7 +236,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === RUN_GEOLOCATION_SCAN) {
-    runGeolocationScan()
+    isExtensionEnabled()
+      .then((enabled) => {
+        if (!enabled) {
+          throw new Error('Privacy Guard is disabled.')
+        }
+
+        return runGeolocationScan()
+      })
       .then((result) => {
         sendResponse({ success: true, data: result })
       })
@@ -143,6 +267,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   ) {
     const handleProtectionMessage = async () => {
       try {
+        const enabled = await isExtensionEnabled()
+
+        if (
+          !enabled &&
+          message.type !== GET_PROTECTION_STATUS
+        ) {
+          throw new Error('Privacy Guard is disabled.')
+        }
+
         if (message.type === UPDATE_PROTECTION_CONTROLS) {
           const result = protectionControlsSchema.safeParse(
             message.controls,

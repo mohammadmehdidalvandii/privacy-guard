@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -12,6 +13,7 @@ import PrivacyChecks from "@/popup/components/privacy-checks";
 import ProfileSelector from "@/popup/components/profile-selector";
 import ProtectionOverview from "@/popup/components/protection-overview";
 import SettingsPage from "@/popup/pages/settings-page";
+import GuidePage from "@/popup/pages/guide-page";
 
 import { requestFingerprintScan } from "@/services/messaging/fingerprint-messaging";
 import { requestGeolocationScan } from "@/services/messaging/geolocation-messaging";
@@ -49,6 +51,7 @@ import type {
 import {
   applyProtectionProfile,
   requestProtectionStatus,
+  setExtensionEnabled,
   updateProtectionControls,
 } from "@/services/messaging/protection-messaging";
 
@@ -56,9 +59,14 @@ function App() {
   const queryClient = useQueryClient();
 
   const [profile, setProfile] = useState<ProtectionProfile>(DEFAULT_PROFILE);
-  const [currentPage, setCurrentPage] = useState<"home" | "settings">("home");
+
+  const [currentPage, setCurrentPage] = useState<
+    "home" | "settings" | "guide"
+  >("home");
+
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isExtensionUpdating, setIsExtensionUpdating] = useState(false);
 
   const [protectionControls, setProtectionControls] =
     useState<ProtectionControlStatus | null>(null);
@@ -69,13 +77,14 @@ function App() {
   const { data: vpnState } = useQuery({
     queryKey: ["vpn-state"],
     queryFn: getVPNState,
-    refetchInterval: 30_000,
+    enabled: settings.enabled && isDataLoaded,
+    refetchInterval: settings.enabled ? 30_000 : false,
   });
 
   const { data: networkInfo } = useQuery({
     queryKey: ["network-info"],
     queryFn: getNetworkInfo,
-    enabled: currentPage === "home",
+    enabled: settings.enabled && currentPage === "home",
     staleTime: 60_000,
     retry: 2,
   });
@@ -94,10 +103,11 @@ function App() {
       return analyzeWebRTC(networkInfo.ip);
     },
     enabled:
+      settings.enabled &&
       currentPage === "home" &&
       Boolean(networkInfo?.ip && networkInfo.ip !== "Unknown"),
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: settings.enabled ? 60_000 : false,
     retry: false,
   });
 
@@ -150,9 +160,13 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!isDataLoaded || !settings.enabled) return;
+
     let isActive = true;
 
     const loadProtectionStatus = async () => {
+      setIsProtectionLoading(true);
+
       try {
         const state = await requestProtectionStatus();
 
@@ -180,9 +194,11 @@ function App() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [isDataLoaded, settings.enabled]);
 
   useEffect(() => {
+    if (!isDataLoaded || !settings.enabled) return;
+
     let isActive = true;
 
     const checkVPN = async () => {
@@ -202,9 +218,57 @@ function App() {
     return () => {
       isActive = false;
     };
-  }, [queryClient]);
+  }, [isDataLoaded, settings.enabled, queryClient]);
 
-  const updateSetting = async (key: "notifications", checked: boolean) => {
+  const handleExtensionToggle = async (enabled: boolean) => {
+    if (isExtensionUpdating || enabled === settings.enabled) return;
+
+    setIsExtensionUpdating(true);
+
+    try {
+      await setExtensionEnabled(enabled);
+
+      setSettings((previous) => ({
+        ...previous,
+        enabled,
+      }));
+
+      if (!enabled) {
+        queryClient.cancelQueries();
+
+        queryClient.removeQueries({
+          queryKey: ["network-info"],
+        });
+
+        queryClient.removeQueries({
+          queryKey: ["webrtc-analysis"],
+        });
+
+        queryClient.removeQueries({
+          queryKey: ["vpn-state"],
+        });
+
+        setProtectionControls(null);
+      } else {
+        await queryClient.invalidateQueries();
+      }
+    } catch (error) {
+      console.error("Failed to update extension status:", error);
+
+      setProtectionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to update extension status.",
+      );
+    } finally {
+      setIsExtensionUpdating(false);
+    }
+  };
+
+  const updateSetting = async (
+    key: "notifications",
+    checked: boolean,
+  ) => {
     const updatedSettings: AppSettings = {
       ...settings,
       [key]: checked,
@@ -237,7 +301,7 @@ function App() {
   };
 
   const updateProfile = async (newProfile: ProtectionProfile) => {
-    if (newProfile === profile) return;
+    if (!settings.enabled || newProfile === profile) return;
 
     const previousControls = protectionControls;
 
@@ -284,6 +348,8 @@ function App() {
   };
 
   const handleProtectionUpdate = async (controls: ProtectionControls) => {
+    if (!settings.enabled) return;
+
     setIsProtectionLoading(true);
     setProtectionError(null);
 
@@ -302,7 +368,7 @@ function App() {
   };
 
   const handleWebRTCChange = (value: WebRTCProtectionLevel) => {
-    if (!protectionControls) return;
+    if (!settings.enabled || !protectionControls) return;
 
     void handleProtectionUpdate({
       ...protectionControls,
@@ -311,7 +377,7 @@ function App() {
   };
 
   const handleThirdPartyCookiesChange = (checked: boolean) => {
-    if (!protectionControls) return;
+    if (!settings.enabled || !protectionControls) return;
 
     void handleProtectionUpdate({
       ...protectionControls,
@@ -320,7 +386,7 @@ function App() {
   };
 
   const handleGeolocationChange = (value: GeolocationSetting) => {
-    if (!protectionControls) return;
+    if (!settings.enabled || !protectionControls) return;
 
     void handleProtectionUpdate({
       ...protectionControls,
@@ -329,6 +395,8 @@ function App() {
   };
 
   const handleResetSettings = async () => {
+    if (!settings.enabled) return;
+
     setIsProtectionLoading(true);
     setProtectionError(null);
 
@@ -376,6 +444,7 @@ function App() {
       {currentPage === "settings" ? (
         <SettingsPage
           onBack={() => setCurrentPage("home")}
+          enabled={settings.enabled}
           notifications={settings.notifications}
           isCustomLocation={profile === "custom-location"}
           expectedCountryCode={settings.expectedCountryCode}
@@ -393,56 +462,85 @@ function App() {
           onGeolocationChange={handleGeolocationChange}
           onReset={() => void handleResetSettings()}
         />
+      ) : currentPage === "guide" ? (
+        <GuidePage onBack={() => setCurrentPage("home")} />
       ) : (
         <>
-          <PopupHeader onSettingsClick={() => setCurrentPage("settings")} />
+          <PopupHeader
+            enabled={settings.enabled}
+            isLoading={isExtensionUpdating}
+            onEnabledChange={handleExtensionToggle}
+            onSettingsClick={() => setCurrentPage("settings")}
+            onGuideClick={() => setCurrentPage("guide")}
+          />
 
-          <div className="space-y-5 p-4">
-            <VPNStatus status={displayVPNStatus} />
+          {settings.enabled ? (
+            <>
+              <div className="space-y-5 p-4">
+                <VPNStatus status={displayVPNStatus} />
 
-            <NetworkInfo />
+                <NetworkInfo />
 
-            <WebRTCStatus
-              analysis={webRTCAnalysis}
-              isLoading={isWebRTCLoading}
-              error={webRTCError?.message ?? null}
-            />
+                <WebRTCStatus
+                  analysis={webRTCAnalysis}
+                  isLoading={isWebRTCLoading}
+                  error={webRTCError?.message ?? null}
+                />
 
-            <DNSStatus
-              result={dnsTestMutation.data}
-              networkIp={networkInfo?.ip}
-              isLoading={dnsTestMutation.isPending}
-              error={dnsTestMutation.error?.message ?? null}
-              onRunTest={() => dnsTestMutation.mutate()}
-            />
+                <DNSStatus
+                  result={dnsTestMutation.data}
+                  networkIp={networkInfo?.ip}
+                  isLoading={dnsTestMutation.isPending}
+                  error={dnsTestMutation.error?.message ?? null}
+                  onRunTest={() => dnsTestMutation.mutate()}
+                />
 
-            <PrivacyChecks
-              webRTCAnalysis={webRTCAnalysis}
-              isWebRTCLoading={isWebRTCLoading}
-              webRTCError={webRTCError?.message ?? null}
-              dnsResult={dnsTestMutation.data}
-              isDNSLoading={dnsTestMutation.isPending}
-              dnsError={dnsTestMutation.error?.message ?? null}
-              fingerprintResult={fingerprintMutation.data}
-              isFingerprintLoading={fingerprintMutation.isPending}
-              fingerprintError={fingerprintMutation.error?.message ?? null}
-              onRunFingerprintScan={() => fingerprintMutation.mutate()}
-              geolocationResult={geolocationMutation.data}
-              isGeolocationLoading={geolocationMutation.isPending}
-              geolocationError={geolocationMutation.error?.message ?? null}
-              onRunGeolocationScan={() => geolocationMutation.mutate()}
-              timezoneConsistency={timezoneConsistency}
-            />
+                <PrivacyChecks
+                  webRTCAnalysis={webRTCAnalysis}
+                  isWebRTCLoading={isWebRTCLoading}
+                  webRTCError={webRTCError?.message ?? null}
+                  dnsResult={dnsTestMutation.data}
+                  isDNSLoading={dnsTestMutation.isPending}
+                  dnsError={dnsTestMutation.error?.message ?? null}
+                  fingerprintResult={fingerprintMutation.data}
+                  isFingerprintLoading={fingerprintMutation.isPending}
+                  fingerprintError={fingerprintMutation.error?.message ?? null}
+                  onRunFingerprintScan={() => fingerprintMutation.mutate()}
+                  geolocationResult={geolocationMutation.data}
+                  isGeolocationLoading={geolocationMutation.isPending}
+                  geolocationError={geolocationMutation.error?.message ?? null}
+                  onRunGeolocationScan={() => geolocationMutation.mutate()}
+                  timezoneConsistency={timezoneConsistency}
+                />
 
-            <ProfileSelector
-              value={profile}
-              onChange={(newProfile) => void updateProfile(newProfile)}
-            />
+                <ProfileSelector
+                  value={profile}
+                  onChange={(newProfile) => void updateProfile(newProfile)}
+                />
 
-            <ProtectionOverview controls={protectionControls} />
-          </div>
+                <ProtectionOverview controls={protectionControls} />
+              </div>
 
-          <PopupFooter onSettingsClick={() => setCurrentPage("settings")} />
+              <PopupFooter
+                onSettingsClick={() => setCurrentPage("settings")}
+              />
+            </>
+          ) : (
+            <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-6 text-center">
+              <div className="rounded-full bg-muted p-4">
+                <span className="text-2xl">⏸</span>
+              </div>
+
+              <h2 className="text-base font-semibold">
+                Privacy Guard is paused
+              </h2>
+
+              <p className="max-w-64 text-sm text-muted-foreground">
+                Monitoring, scans, and protection controls are currently
+                disabled. Turn on the switch to resume Privacy Guard.
+              </p>
+            </div>
+          )}
         </>
       )}
     </PopupLayout>

@@ -52,3 +52,11 @@ export async function applyProtectionControls(
     }),
   ])
 }
+
+export async function resetProtectionControls(): Promise<void> {
+  await Promise.all([
+    chrome.privacy.network.webRTCIPHandlingPolicy.clear({}),
+    chrome.privacy.websites.thirdPartyCookiesAllowed.clear({}),
+    chrome.contentSettings.location.clear({}),
+  ])
+}

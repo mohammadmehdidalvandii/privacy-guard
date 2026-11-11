@@ -28,6 +28,7 @@ import ProtectionControls from '@/popup/components/protection-controls'
 
 interface SettingsPageProps {
   onBack: () => void
+  enabled: boolean
   notifications: boolean
   isCustomLocation: boolean
   expectedCountryCode: string | null
@@ -73,6 +74,7 @@ function SettingToggle({
 
 function SettingsPage({
   onBack,
+  enabled,
   notifications,
   isCustomLocation,
   expectedCountryCode,
@@ -178,7 +180,11 @@ function SettingsPage({
       )}
 
       <section className="space-y-3">
-        {isProtectionLoading ? (
+        {!enabled ? (
+          <p className="rounded-lg border p-3 text-xs text-muted-foreground">
+            Protection controls are unavailable while Privacy Guard is paused.
+          </p>
+        ) : isProtectionLoading ? (
           <p className="text-xs text-muted-foreground">
             Loading browser protection settings...
           </p>
@@ -203,14 +209,17 @@ function SettingsPage({
         <button
           type="button"
           onClick={onReset}
-          className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted"
+          disabled={!enabled}
+          className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RotateCcw className="size-5 text-muted-foreground" />
 
           <div>
             <p className="text-sm font-medium">Reset Settings</p>
             <p className="text-xs text-muted-foreground">
-              Restore default preferences
+              {enabled
+                ? 'Restore default preferences'
+                : 'Enable Privacy Guard to reset settings'}
             </p>
           </div>
         </button>
