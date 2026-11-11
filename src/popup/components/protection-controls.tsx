@@ -1,5 +1,4 @@
-
-import { Cookie, Radio } from 'lucide-react'
+import { Cookie, MapPin, Radio } from 'lucide-react'
 
 import { Switch } from '@/components/ui/switch'
 import {
@@ -11,6 +10,7 @@ import {
 } from '@/components/ui/select'
 
 import type {
+  GeolocationSetting,
   ProtectionControlStatus,
   WebRTCProtectionLevel,
 } from '@/modules/protection/protection.types'
@@ -19,6 +19,7 @@ interface ProtectionControlsProps {
   controls: ProtectionControlStatus
   onWebRTCChange: (value: WebRTCProtectionLevel) => void
   onThirdPartyCookiesChange: (checked: boolean) => void
+  onGeolocationChange: (value: GeolocationSetting) => void
   disabled?: boolean
 }
 
@@ -26,6 +27,7 @@ function ProtectionControls({
   controls,
   onWebRTCChange,
   onThirdPartyCookiesChange,
+  onGeolocationChange,
   disabled = false,
 }: ProtectionControlsProps) {
   return (
@@ -61,6 +63,35 @@ function ProtectionControls({
             <SelectItem value="disable-non-proxied-udp">
               Disable Non-Proxied UDP
             </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3 rounded-lg border p-3">
+        <div className="flex items-center gap-2">
+          <MapPin className="size-4" />
+          <p className="text-sm font-medium">Geolocation Access</p>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Control whether websites can request your device location.
+        </p>
+
+        <Select
+          value={controls.geolocation}
+          onValueChange={(value) =>
+            onGeolocationChange(value as GeolocationSetting)
+          }
+          disabled={disabled}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="ask">Ask</SelectItem>
+            <SelectItem value="allow">Allow</SelectItem>
+            <SelectItem value="block">Block</SelectItem>
           </SelectContent>
         </Select>
       </div>

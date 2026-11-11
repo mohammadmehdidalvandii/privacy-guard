@@ -8,7 +8,8 @@
     "alarms",
     "privacy",
     "activeTab",
-    "scripting"
+    "scripting",
+    "contentSettings"
   ],
   "host_permissions": [
     "https://api.ipify.org/*",

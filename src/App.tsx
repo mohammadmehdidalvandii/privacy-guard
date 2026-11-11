@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -37,6 +38,7 @@ import { requestVPNStatus } from "@/services/messaging/vpn-messaging";
 import { requestDNSLeakTest } from "@/services/messaging/dns-messaging";
 
 import type {
+  GeolocationSetting,
   ProtectionControls,
   ProtectionControlStatus,
   WebRTCProtectionLevel,
@@ -47,6 +49,7 @@ import {
   requestProtectionStatus,
   updateProtectionControls,
 } from "@/services/messaging/protection-messaging";
+
 function App() {
   const queryClient = useQueryClient();
 
@@ -294,6 +297,15 @@ function App() {
     });
   };
 
+  const handleGeolocationChange = (value: GeolocationSetting) => {
+    if (!protectionControls) return;
+
+    void handleProtectionUpdate({
+      ...protectionControls,
+      geolocation: value,
+    });
+  };
+
   const handleResetSettings = async () => {
     setIsProtectionLoading(true);
     setProtectionError(null);
@@ -356,6 +368,7 @@ function App() {
           }
           onWebRTCChange={handleWebRTCChange}
           onThirdPartyCookiesChange={handleThirdPartyCookiesChange}
+          onGeolocationChange={handleGeolocationChange}
           onReset={() => void handleResetSettings()}
         />
       ) : (
@@ -409,4 +422,4 @@ function App() {
   );
 }
 
-export default App;
+export default App

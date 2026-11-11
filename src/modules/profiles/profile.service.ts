@@ -21,6 +21,7 @@ export function getProfileProtectionControls(
       return {
         webRTCProtection: 'default',
         blockThirdPartyCookies: false,
+        geolocation: 'ask',
       }
 
     case 'advanced':
@@ -28,12 +29,14 @@ export function getProfileProtectionControls(
       return {
         webRTCProtection: 'public-only',
         blockThirdPartyCookies: true,
+        geolocation: 'ask',
       }
 
     case 'strict':
       return {
         webRTCProtection: 'disable-non-proxied-udp',
         blockThirdPartyCookies: true,
+        geolocation: 'block',
       }
   }
 }

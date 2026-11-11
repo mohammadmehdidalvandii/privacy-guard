@@ -28,18 +28,34 @@ function ProtectionOverview({ controls }: ProtectionOverviewProps) {
       : "Allowed"
     : "Unknown";
 
+  const geolocationStatus = controls
+    ? controls.geolocation === "block"
+      ? "Blocked"
+      : controls.geolocation === "ask"
+        ? "Ask"
+        : "Allowed"
+    : "Unknown";
+
   const activeCount = controls
     ? Number(controls.webRTCProtection !== "default") +
-      Number(controls.blockThirdPartyCookies)
+      Number(controls.blockThirdPartyCookies) +
+      Number(controls.geolocation === "block")
     : null;
 
   const protectionItems = [
     {
       key: "location",
-      label: "Location Protection",
-      description: "Location access blocking is not implemented yet",
-      status: "Not implemented",
-      statusClass: "bg-muted text-muted-foreground",
+      label: "Geolocation Protection",
+      description: "Control website access to device location",
+      status: geolocationStatus,
+      statusClass:
+        geolocationStatus === "Blocked"
+          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+          : geolocationStatus === "Ask"
+            ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+            : geolocationStatus === "Allowed"
+              ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+              : "bg-muted text-muted-foreground",
       icon: MapPin,
     },
     {
@@ -97,7 +113,7 @@ function ProtectionOverview({ controls }: ProtectionOverviewProps) {
         <span className="text-xs text-muted-foreground">
           {activeCount === null
             ? "Loading protections..."
-            : `${activeCount}/2 available protections active`}
+            : `${activeCount}/3 active protections`}
         </span>
       </div>
 

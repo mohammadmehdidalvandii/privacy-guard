@@ -1,3 +1,4 @@
+
 import {
   ArrowLeft,
   Bell,
@@ -18,6 +19,7 @@ import {
 import { COUNTRY_OPTIONS } from '@/modules/profiles/country-options'
 
 import type {
+  GeolocationSetting,
   ProtectionControlStatus,
   WebRTCProtectionLevel,
 } from '@/modules/protection/protection.types'
@@ -36,6 +38,7 @@ interface SettingsPageProps {
   onExpectedCountryChange: (countryCode: string | null) => void
   onWebRTCChange: (value: WebRTCProtectionLevel) => void
   onThirdPartyCookiesChange: (checked: boolean) => void
+  onGeolocationChange: (value: GeolocationSetting) => void
   onReset: () => void
 }
 
@@ -80,6 +83,7 @@ function SettingsPage({
   onExpectedCountryChange,
   onWebRTCChange,
   onThirdPartyCookiesChange,
+  onGeolocationChange,
   onReset,
 }: SettingsPageProps) {
   const selectedCountry = COUNTRY_OPTIONS.find(
@@ -187,6 +191,8 @@ function SettingsPage({
             controls={protectionControls}
             onWebRTCChange={onWebRTCChange}
             onThirdPartyCookiesChange={onThirdPartyCookiesChange}
+            onGeolocationChange={onGeolocationChange}
+            disabled={isProtectionLoading}
           />
         ) : null}
       </section>

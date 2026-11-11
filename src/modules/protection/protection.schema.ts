@@ -7,4 +7,5 @@ export const protectionControlsSchema = z.object({
     'disable-non-proxied-udp',
   ]),
   blockThirdPartyCookies: z.boolean(),
+  geolocation: z.enum(['allow', 'ask', 'block']),
 })
