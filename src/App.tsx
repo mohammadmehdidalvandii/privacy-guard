@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
 import PopupLayout from "@/popup/layouts/popup-layout";
 import PopupHeader from "@/popup/components/popup-header";
 import PopupFooter from "@/popup/components/popup-footer";
@@ -12,16 +11,14 @@ import PrivacyChecks from "@/popup/components/privacy-checks";
 import ProfileSelector from "@/popup/components/profile-selector";
 import ProtectionOverview from "@/popup/components/protection-overview";
 import SettingsPage from "@/popup/pages/settings-page";
-
+import { analyzeProvider } from "@/modules/vpn/vpn-analyzer";
 import {
   DEFAULT_PROFILE,
   type ProtectionProfile,
 } from "@/modules/profiles/profile.types";
-
 import { getProfileConfig } from "@/modules/profiles/profile.service";
 import { getNetworkInfo } from "@/modules/network/network.service";
 import { analyzeWebRTC } from "@/modules/webrtc/webrtc.service";
-
 import {
   DEFAULT_SETTINGS,
   getSettings,
@@ -29,19 +26,15 @@ import {
   saveSettings,
   type AppSettings,
 } from "@/services/storage/settings-storage";
-
 import { getProfile, saveProfile } from "@/services/storage/profile-storage";
-
 import { getVPNState } from "@/services/storage/vpn-storage";
 import { requestVPNStatus } from "@/services/messaging/vpn-messaging";
 import { requestDNSLeakTest } from "@/services/messaging/dns-messaging";
-
 import type {
   ProtectionControls,
   ProtectionControlStatus,
   WebRTCProtectionLevel,
 } from "@/modules/protection/protection.types";
-
 import {
   requestProtectionStatus,
   updateProtectionControls,
@@ -49,19 +42,15 @@ import {
 
 function App() {
   const queryClient = useQueryClient();
-
   const [profile, setProfile] = useState<ProtectionProfile>(DEFAULT_PROFILE);
   const [currentPage, setCurrentPage] = useState<"home" | "settings">("home");
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-
   const [protectionControls, setProtectionControls] =
     useState<ProtectionControlStatus | null>(null);
   const [isProtectionLoading, setIsProtectionLoading] = useState(true);
   const [protectionError, setProtectionError] = useState<string | null>(null);
-
   const profileConfig = getProfileConfig(profile);
-
   const { data: vpnState } = useQuery({
     queryKey: ["vpn-state"],
     queryFn: getVPNState,
@@ -264,6 +253,16 @@ function App() {
     }
   };
 
+  const providerAnalysis = networkInfo
+    ? analyzeProvider(networkInfo)
+    : null;
+
+  const displayVPNStatus =
+    providerAnalysis?.isHostingProvider &&
+    webRTCAnalysis?.hasPublicIpMismatch
+      ? "possible"
+      : vpnState?.status ?? "unknown";
+
   if (!isDataLoaded) {
     return (
       <PopupLayout>
@@ -308,7 +307,7 @@ function App() {
           <PopupHeader onSettingsClick={() => setCurrentPage("settings")} />
 
           <div className="space-y-5 p-4">
-            <VPNStatus status={vpnState?.status ?? "unknown"} />
+            <VPNStatus status={displayVPNStatus} />
 
             <NetworkInfo />
 

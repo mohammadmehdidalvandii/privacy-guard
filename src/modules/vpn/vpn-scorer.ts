@@ -20,19 +20,32 @@ export function scoreVPNSignals(
   input: VPNScoringInput,
 ): VPNScoringResult {
   const evidence: VPNEvidenceType[] = []
+  let score = 0
 
   if (input.hasIpChanged) {
     evidence.push('ip-changed')
+    score += 10
   }
 
   if (input.isHostingProvider) {
     evidence.push('hosting-provider')
+    score += 20
   }
 
+  const status: VPNStatus =
+    score >= 30
+      ? 'possible'
+      : 'not-detected'
+
+  const confidence: VPNConfidence =
+    score >= 30
+      ? 'medium'
+      : 'low'
+
   return {
-    status: 'not-detected',
-    confidence: 'low',
-    score: 0,
+    status,
+    confidence,
+    score,
     evidence,
   }
 }

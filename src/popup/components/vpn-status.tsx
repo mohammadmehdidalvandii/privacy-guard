@@ -14,19 +14,19 @@ interface VPNStatusProps {
 const statusConfig = {
   likely: {
     label: 'VPN Likely Detected',
-    description: 'Multiple network signals suggest VPN usage.',
+    description: 'Strong network indicators suggest VPN usage.',
     icon: ShieldCheck,
     className: 'text-green-500 bg-green-500/10',
   },
   possible: {
     label: 'Possible VPN Detected',
-    description: 'Some network signals suggest VPN usage.',
+    description: 'Some network indicators may suggest VPN usage.',
     icon: ShieldAlert,
     className: 'text-yellow-500 bg-yellow-500/10',
   },
   'not-detected': {
-    label: 'VPN Not Detected',
-    description: 'No significant VPN indicators were detected.',
+    label: 'No VPN Indicators Detected',
+    description: 'No sufficient VPN indicators were found. This does not confirm that VPN is disabled.',
     icon: ShieldX,
     className: 'text-muted-foreground bg-muted',
   },
