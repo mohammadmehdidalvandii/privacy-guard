@@ -359,7 +359,7 @@ function App() {
       setProtectionError(
         error instanceof Error
           ? error.message
-          : "Failed to update browser protection settings.",
+          : "Browser protection controls may be partially changed. Please check your protection settings.",
       );
     } finally {
       setIsProtectionLoading(false);

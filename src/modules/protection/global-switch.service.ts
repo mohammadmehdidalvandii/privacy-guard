@@ -13,7 +13,7 @@ export interface GlobalSwitchDependencies {
   getTransition: () => Promise<GlobalSwitchTransition | null>
   saveTransition: (transition: GlobalSwitchTransition) => Promise<void>
   getControls: () => Promise<ProtectionControls>
-  applyControls: (controls: ProtectionControls) => Promise<void>
+  applyControls: (controls: ProtectionControls) => Promise<unknown>
   resetControls: () => Promise<void>
   startMonitoring: () => void
   stopMonitoring: () => Promise<void>

@@ -14,6 +14,7 @@ import {
 import { protectionControlsSchema } from '@/modules/protection/protection.schema'
 import { getProfileProtectionControls } from '@/modules/profiles/profile.service'
 import { createGlobalSwitchManager } from '@/modules/protection/global-switch.service'
+import { ProtectionControlWriteError } from '@/modules/protection/protection.service'
 import {
   getExtensionTransition,
   saveExtensionTransition,
@@ -289,6 +290,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       } catch (error) {
         sendResponse({
           success: false,
+          data:
+            error instanceof ProtectionControlWriteError
+              ? error.result
+              : undefined,
           error:
             error instanceof Error
               ? error.message
