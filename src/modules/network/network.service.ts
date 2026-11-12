@@ -10,6 +10,9 @@ export async function getNetworkInfo(): Promise<NetworkInfo> {
     ip: data.ip || 'Unknown',
     ipType: data.version || 'Unknown',
     country: data.country_name || data.country || 'Unknown',
+    countryCode: /^[A-Z]{2}$/.test(data.country ?? '')
+      ? data.country ?? null
+      : null,
     city: data.city || 'Unknown',
     timezone: data.timezone || 'Unknown',
     isp: data.org || 'Unknown',

@@ -31,6 +31,8 @@ interface SettingsPageProps {
   notifications: boolean
   isCustomLocation: boolean
   expectedCountryCode: string | null
+  networkCountryCode: string | null
+  networkCountryName: string | null
   protectionControls: ProtectionControlStatus | null
   isProtectionLoading: boolean
   protectionError: string | null
@@ -57,6 +59,7 @@ function SettingToggle({
   disabled = false,
   onChange,
 }: SettingToggleProps) {
+
   return (
     <div className="flex items-center justify-between rounded-lg border p-3">
       <div className="space-y-1">
@@ -80,6 +83,8 @@ function SettingsPage({
   notifications,
   isCustomLocation,
   expectedCountryCode,
+  networkCountryCode,
+  networkCountryName,
   protectionControls,
   isProtectionLoading,
   protectionError,
@@ -93,6 +98,14 @@ function SettingsPage({
   const selectedCountry = COUNTRY_OPTIONS.find(
     (country) => country.code === expectedCountryCode,
   )
+
+  const countryComparison = !expectedCountryCode
+    ? 'Select an expected country to compare it with your network country.'
+    : !networkCountryCode
+      ? 'Your network country is unavailable, so it cannot be compared with your selected expected country.'
+      : expectedCountryCode === networkCountryCode
+        ? `Your selected expected country matches your network country (${networkCountryName ?? networkCountryCode}).`
+        : `Your selected expected country differs from your network country (${networkCountryName ?? networkCountryCode}).`
 
   return (
     <main className="space-y-5 p-4">
@@ -166,6 +179,10 @@ function SettingsPage({
                 ))}
               </SelectContent>
             </Select>
+
+            <p className="text-xs text-muted-foreground">
+              {countryComparison}
+            </p>
 
             {expectedCountryCode && (
               <button
