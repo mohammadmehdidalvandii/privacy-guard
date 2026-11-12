@@ -99,7 +99,7 @@ export async function clearProtectionSnapshot(): Promise<void> {
 }
 
 export type ExtensionTransition =
-  | 'active'
+  | 'idle'
   | 'pausing'
   | 'paused'
   | 'resuming'
@@ -108,7 +108,7 @@ export async function getExtensionTransition(): Promise<ExtensionTransition | nu
   const result = await chrome.storage.local.get(EXTENSION_TRANSITION_KEY)
   const transition: unknown = result[EXTENSION_TRANSITION_KEY]
 
-  return transition === 'active' ||
+  return transition === 'idle' ||
     transition === 'pausing' ||
     transition === 'paused' ||
     transition === 'resuming'

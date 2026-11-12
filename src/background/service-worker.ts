@@ -13,6 +13,11 @@ import {
 
 import { protectionControlsSchema } from '@/modules/protection/protection.schema'
 import { getProfileProtectionControls } from '@/modules/profiles/profile.service'
+import { createGlobalSwitchManager } from '@/modules/protection/global-switch.service'
+import {
+  getExtensionTransition,
+  saveExtensionTransition,
+} from '@/services/storage/settings-storage'
 
 import {
   clearProtectionSnapshot,
@@ -64,54 +69,30 @@ function startVPNMonitoring(): void {
   void runVPNMonitor()
 }
 
-async function syncExtensionState(): Promise<void> {
-  if (await isExtensionEnabled()) {
-    startVPNMonitoring()
-  } else {
+const globalSwitch = createGlobalSwitchManager({
+  getSettings,
+  saveSettings,
+  getSnapshot: getProtectionSnapshot,
+  saveSnapshot: saveProtectionSnapshot,
+  clearSnapshot: clearProtectionSnapshot,
+  getTransition: getExtensionTransition,
+  saveTransition: saveExtensionTransition,
+  getControls: getProtectionControls,
+  applyControls: applyProtectionControls,
+  resetControls: resetProtectionControls,
+  startMonitoring: startVPNMonitoring,
+  stopMonitoring: async () => {
     await chrome.alarms.clear(VPN_MONITOR_ALARM)
-  }
+  },
+})
+
+async function syncExtensionState(): Promise<void> {
+  await globalSwitch.recover()
 }
 
 async function setExtensionEnabled(enabled: boolean): Promise<boolean> {
-  const settings = await getSettings()
-
-  if (settings.enabled === enabled) {
-    return enabled
-  }
-
-  if (!enabled) {
-    const currentControls = await getProtectionControls()
-
-    await saveProtectionSnapshot(currentControls)
-    await resetProtectionControls()
-
-    await saveSettings({
-      ...settings,
-      enabled: false,
-    })
-
-    await chrome.alarms.clear(VPN_MONITOR_ALARM)
-
-    return false
-  }
-
-  const snapshot = await getProtectionSnapshot()
-
-  if (snapshot) {
-    await applyProtectionControls(snapshot)
-  }
-
-  await saveSettings({
-    ...settings,
-    enabled: true,
-  })
-
-  await clearProtectionSnapshot()
-  startVPNMonitoring()
-
-  return true
+  return globalSwitch.setEnabled(enabled)
 }
-
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Privacy Guard installed successfully.')
   void syncExtensionState()
