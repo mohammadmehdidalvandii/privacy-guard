@@ -5,8 +5,6 @@ import {
   type ProtectionProfileConfig,
 } from './profile.types'
 
-import type { ProtectionControls } from '@/modules/protection/protection.types'
-
 export function getProfileConfig(
   profile: ProtectionProfile = DEFAULT_PROFILE,
 ): ProtectionProfileConfig {
@@ -15,28 +13,6 @@ export function getProfileConfig(
 
 export function getProfileProtectionControls(
   profile: ProtectionProfile,
-): ProtectionControls {
-  switch (profile) {
-    case 'basic':
-      return {
-        webRTCProtection: 'default',
-        blockThirdPartyCookies: false,
-        geolocation: 'ask',
-      }
-
-    case 'advanced':
-    case 'custom-location':
-      return {
-        webRTCProtection: 'public-only',
-        blockThirdPartyCookies: true,
-        geolocation: 'ask',
-      }
-
-    case 'strict':
-      return {
-        webRTCProtection: 'disable-non-proxied-udp',
-        blockThirdPartyCookies: true,
-        geolocation: 'block',
-      }
-  }
+): ProtectionProfileConfig['controls'] {
+  return { ...getProfileConfig(profile).controls }
 }

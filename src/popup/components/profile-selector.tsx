@@ -1,6 +1,9 @@
 import { Shield, ShieldCheck, SlidersHorizontal, MapPin } from 'lucide-react'
 
-import type { ProtectionProfile } from '@/modules/profiles/profile.types'
+import {
+  PROFILE_CONFIGS,
+  type ProtectionProfile,
+} from '@/modules/profiles/profile.types'
 
 interface ProfileSelectorProps {
   value: ProtectionProfile
@@ -10,26 +13,18 @@ interface ProfileSelectorProps {
 const profiles = [
   {
     value: 'basic',
-    label: 'Basic',
-    description: 'Essential privacy protection',
     icon: Shield,
   },
   {
     value: 'advanced',
-    label: 'Advanced',
-    description: 'Enhanced privacy protection',
     icon: ShieldCheck,
   },
   {
     value: 'custom-location',
-    label: 'Custom Location',
-    description: 'Configure your preferred location',
     icon: MapPin,
   },
   {
     value: 'strict',
-    label: 'Strict Privacy',
-    description: 'Maximum available browser privacy controls',
     icon: SlidersHorizontal,
   },
 ] as const
@@ -43,6 +38,7 @@ function ProfileSelector({ value, onChange }: ProfileSelectorProps) {
         {profiles.map((profile) => {
           const Icon = profile.icon
           const isActive = value === profile.value
+          const config = PROFILE_CONFIGS[profile.value]
 
           return (
             <button
@@ -57,12 +53,10 @@ function ProfileSelector({ value, onChange }: ProfileSelectorProps) {
             >
               <Icon className="size-5" />
 
-              <span className="text-sm font-medium">
-                {profile.label}
-              </span>
+              <span className="text-sm font-medium">{config.label}</span>
 
               <span className="text-xs text-muted-foreground">
-                {profile.description}
+                {config.description}
               </span>
             </button>
           )

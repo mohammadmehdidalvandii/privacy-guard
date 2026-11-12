@@ -1,3 +1,4 @@
+import type { ProtectionControls } from '@/modules/protection/protection.types'
 
 export type ProtectionProfile =
   | 'basic'
@@ -6,11 +7,9 @@ export type ProtectionProfile =
   | 'strict'
 
 export interface ProtectionProfileConfig {
-  locationProtection: boolean
-  webrtcProtection: boolean
-  fingerprintProtection: boolean
-  dnsLeakMonitoring: boolean
-  blockThirdPartyCookies: boolean
+  label: string
+  description: string
+  controls: ProtectionControls
 }
 
 export const DEFAULT_PROFILE: ProtectionProfile = 'basic'
@@ -20,34 +19,42 @@ export const PROFILE_CONFIGS: Record<
   ProtectionProfileConfig
 > = {
   basic: {
-    locationProtection: true,
-    webrtcProtection: false,
-    fingerprintProtection: false,
-    dnsLeakMonitoring: false,
-    blockThirdPartyCookies: false,
+    label: 'Basic',
+    description: 'Default browser privacy controls',
+    controls: {
+      webRTCProtection: 'default',
+      blockThirdPartyCookies: false,
+      geolocation: 'ask',
+    },
   },
 
   advanced: {
-    locationProtection: true,
-    webrtcProtection: true,
-    fingerprintProtection: true,
-    dnsLeakMonitoring: true,
-    blockThirdPartyCookies: false,
+    label: 'Advanced',
+    description: 'Blocks third-party cookies and limits WebRTC',
+    controls: {
+      webRTCProtection: 'public-only',
+      blockThirdPartyCookies: true,
+      geolocation: 'ask',
+    },
   },
 
   'custom-location': {
-    locationProtection: true,
-    webrtcProtection: true,
-    fingerprintProtection: true,
-    dnsLeakMonitoring: true,
-    blockThirdPartyCookies: false,
+    label: 'Custom Location',
+    description: 'Preferred country with cookie and WebRTC controls',
+    controls: {
+      webRTCProtection: 'public-only',
+      blockThirdPartyCookies: true,
+      geolocation: 'ask',
+    },
   },
 
   strict: {
-    locationProtection: true,
-    webrtcProtection: true,
-    fingerprintProtection: true,
-    dnsLeakMonitoring: true,
-    blockThirdPartyCookies: true,
+    label: 'Strict Privacy',
+    description: 'Blocks location requests, cookies, and non-proxied UDP',
+    controls: {
+      webRTCProtection: 'disable-non-proxied-udp',
+      blockThirdPartyCookies: true,
+      geolocation: 'block',
+    },
   },
 }
