@@ -83,7 +83,10 @@ function App() {
   const { data: networkInfo } = useQuery({
     queryKey: ["network-info"],
     queryFn: getNetworkInfo,
-    enabled: settings.enabled && currentPage === "home",
+    enabled:
+      settings.enabled &&
+      (currentPage === "home" ||
+        (currentPage === "settings" && profile === "custom-location")),
     staleTime: 60_000,
     retry: 2,
   });
@@ -356,7 +359,7 @@ function App() {
       setProtectionError(
         error instanceof Error
           ? error.message
-          : "Failed to update browser protection settings.",
+          : "Browser protection controls may be partially changed. Please check your protection settings.",
       );
     } finally {
       setIsProtectionLoading(false);
@@ -444,6 +447,8 @@ function App() {
           notifications={settings.notifications}
           isCustomLocation={profile === "custom-location"}
           expectedCountryCode={settings.expectedCountryCode}
+          networkCountryCode={networkInfo?.countryCode ?? null}
+          networkCountryName={networkInfo?.country ?? null}
           protectionControls={protectionControls}
           isProtectionLoading={isProtectionLoading}
           protectionError={protectionError}

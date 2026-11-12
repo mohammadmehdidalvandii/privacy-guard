@@ -2,6 +2,7 @@ export interface NetworkInfo {
   ip: string
   ipType: string
   country: string
+  countryCode: string | null
   city: string
   timezone: string
   isp: string
