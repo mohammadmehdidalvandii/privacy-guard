@@ -1,8 +1,7 @@
 
-import { useQuery } from '@tanstack/react-query'
 import { Globe, MapPin, Clock, Wifi, RefreshCw } from 'lucide-react'
 
-import { getNetworkInfo } from '@/modules/network/network.service'
+import { useNetworkInfo } from '@/hooks/use-network-info'
 
 function NetworkInfo() {
   const {
@@ -11,12 +10,7 @@ function NetworkInfo() {
     isError,
     refetch,
     isFetching,
-  } = useQuery({
-    queryKey: ['network-info'],
-    queryFn: getNetworkInfo,
-    retry: 2,
-    staleTime: 60_000,
-  })
+  } = useNetworkInfo()
 
   return (
     <section className="space-y-3">

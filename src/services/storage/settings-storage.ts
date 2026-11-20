@@ -1,6 +1,6 @@
 
-import { isValidCountryCode } from '@/modules/profiles/country-options'
 import { protectionControlsSchema } from '@/modules/protection/protection.schema'
+import { appSettingsSchema } from './settings.schema'
 
 import type { ProtectionControls } from '@/modules/protection/protection.types'
 
@@ -28,37 +28,13 @@ export async function getSettings(): Promise<AppSettings> {
   const result = await chrome.storage.local.get(STORAGE_KEY)
   const stored: unknown = result[STORAGE_KEY]
 
-  if (!stored || typeof stored !== 'object') {
+  const parsed = appSettingsSchema.safeParse(stored)
+
+  if (!parsed.success) {
     return DEFAULT_SETTINGS
   }
 
-  const data = stored as Record<string, unknown>
-
-  return {
-    enabled:
-      typeof data['enabled'] === 'boolean'
-        ? data['enabled']
-        : DEFAULT_SETTINGS.enabled,
-
-    notifications:
-      typeof data['notifications'] === 'boolean'
-        ? data['notifications']
-        : DEFAULT_SETTINGS.notifications,
-
-    locationProtection:
-      typeof data['locationProtection'] === 'boolean'
-        ? data['locationProtection']
-        : DEFAULT_SETTINGS.locationProtection,
-
-    privacyProtection:
-      typeof data['privacyProtection'] === 'boolean'
-        ? data['privacyProtection']
-        : DEFAULT_SETTINGS.privacyProtection,
-
-    expectedCountryCode: isValidCountryCode(data['expectedCountryCode'])
-      ? data['expectedCountryCode']
-      : null,
-  }
+  return parsed.data
 }
 
 export async function saveSettings(

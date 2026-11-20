@@ -1,3 +1,4 @@
+import { MessageType } from '@/services/messaging/types'
 import { z } from 'zod'
 
 import { checkVPNStatus } from '@/modules/vpn/vpn.service'
@@ -27,17 +28,11 @@ import {
   saveProtectionSnapshot,
   saveSettings,
 } from '@/services/storage/settings-storage'
-
-const VPN_MONITOR_ALARM = 'privacy-guard-vpn-monitor'
-
-const CHECK_VPN_STATUS = 'CHECK_VPN_STATUS'
-const GET_PROTECTION_STATUS = 'GET_PROTECTION_STATUS'
-const UPDATE_PROTECTION_CONTROLS = 'UPDATE_PROTECTION_CONTROLS'
-const APPLY_PROTECTION_PROFILE = 'APPLY_PROTECTION_PROFILE'
-const RUN_DNS_LEAK_TEST = 'RUN_DNS_LEAK_TEST'
-const RUN_FINGERPRINT_SCAN = 'RUN_FINGERPRINT_SCAN'
-const RUN_GEOLOCATION_SCAN = 'RUN_GEOLOCATION_SCAN'
-const SET_EXTENSION_ENABLED = 'SET_EXTENSION_ENABLED'
+import {
+  setupAlarmListeners,
+  startVPNMonitoring,
+  stopVPNMonitoring,
+} from './alarm-manager'
 
 const profileSchema = z.enum([
   'basic',
@@ -49,25 +44,6 @@ const profileSchema = z.enum([
 async function isExtensionEnabled(): Promise<boolean> {
   const settings = await getSettings()
   return settings.enabled
-}
-
-async function runVPNMonitor(): Promise<void> {
-  try {
-    if (!(await isExtensionEnabled())) return
-
-    const state = await checkVPNStatus()
-    console.log('VPN monitoring updated:', state)
-  } catch (error) {
-    console.error('VPN monitoring failed:', error)
-  }
-}
-
-function startVPNMonitoring(): void {
-  chrome.alarms.create(VPN_MONITOR_ALARM, {
-    periodInMinutes: 5,
-  })
-
-  void runVPNMonitor()
 }
 
 const globalSwitch = createGlobalSwitchManager({
@@ -82,9 +58,7 @@ const globalSwitch = createGlobalSwitchManager({
   applyControls: applyProtectionControls,
   resetControls: resetProtectionControls,
   startMonitoring: startVPNMonitoring,
-  stopMonitoring: async () => {
-    await chrome.alarms.clear(VPN_MONITOR_ALARM)
-  },
+  stopMonitoring: stopVPNMonitoring,
 })
 
 async function syncExtensionState(): Promise<void> {
@@ -103,14 +77,10 @@ chrome.runtime.onStartup.addListener(() => {
   void syncExtensionState()
 })
 
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === VPN_MONITOR_ALARM) {
-    void runVPNMonitor()
-  }
-})
+setupAlarmListeners()
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === SET_EXTENSION_ENABLED) {
+  if (message?.type === MessageType.SET_EXTENSION_ENABLED) {
     const enabled = message.enabled
 
     if (typeof enabled !== 'boolean') {
@@ -142,7 +112,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true
   }
 
-  if (message?.type === CHECK_VPN_STATUS) {
+  if (message?.type === MessageType.CHECK_VPN_STATUS) {
     isExtensionEnabled()
       .then((enabled) => {
         if (!enabled) {
@@ -167,7 +137,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true
   }
 
-  if (message?.type === RUN_DNS_LEAK_TEST) {
+  if (message?.type === MessageType.RUN_DNS_LEAK_TEST) {
     isExtensionEnabled()
       .then((enabled) => {
         if (!enabled) {
@@ -192,7 +162,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true
   }
 
-  if (message?.type === RUN_FINGERPRINT_SCAN) {
+  if (message?.type === MessageType.RUN_FINGERPRINT_SCAN) {
     isExtensionEnabled()
       .then((enabled) => {
         if (!enabled) {
@@ -217,7 +187,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true
   }
 
-  if (message?.type === RUN_GEOLOCATION_SCAN) {
+  if (message?.type === MessageType.RUN_GEOLOCATION_SCAN) {
     isExtensionEnabled()
       .then((enabled) => {
         if (!enabled) {
@@ -243,9 +213,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (
-    message?.type === GET_PROTECTION_STATUS ||
-    message?.type === UPDATE_PROTECTION_CONTROLS ||
-    message?.type === APPLY_PROTECTION_PROFILE
+    message?.type === MessageType.GET_PROTECTION_STATUS ||
+    message?.type === MessageType.UPDATE_PROTECTION_CONTROLS ||
+    message?.type === MessageType.APPLY_PROTECTION_PROFILE
   ) {
     const handleProtectionMessage = async () => {
       try {
@@ -253,12 +223,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
         if (
           !enabled &&
-          message.type !== GET_PROTECTION_STATUS
+          message.type !== MessageType.GET_PROTECTION_STATUS
         ) {
           throw new Error('Privacy Guard is disabled.')
         }
 
-        if (message.type === UPDATE_PROTECTION_CONTROLS) {
+        if (message.type === MessageType.UPDATE_PROTECTION_CONTROLS) {
           const result = protectionControlsSchema.safeParse(
             message.controls,
           )
@@ -270,7 +240,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           await applyProtectionControls(result.data)
         }
 
-        if (message.type === APPLY_PROTECTION_PROFILE) {
+        if (message.type === MessageType.APPLY_PROTECTION_PROFILE) {
           const result = profileSchema.safeParse(message.profile)
 
           if (!result.success) {

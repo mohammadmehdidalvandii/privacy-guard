@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "@/hooks/use-app-data";
+import { useProtection } from "@/hooks/use-protection";
+import { useNetworkInfo } from "@/hooks/use-network-info";
 
 import PopupLayout from "@/popup/layouts/popup-layout";
 import PopupHeader from "@/popup/components/popup-header";
@@ -22,56 +25,48 @@ import {
   DEFAULT_PROFILE,
   type ProtectionProfile,
 } from "@/modules/profiles/profile.types";
-import { getNetworkInfo } from "@/modules/network/network.service";
 import { analyzeWebRTC } from "@/modules/webrtc/webrtc.service";
 import type { TimezoneConsistencyResult } from "@/modules/geolocation/geolocation.types";
-
-import {
-  DEFAULT_SETTINGS,
-  getSettings,
-  resetSettings as resetStoredSettings,
-  saveSettings,
-  type AppSettings,
-} from "@/services/storage/settings-storage";
-
-import { getProfile, saveProfile } from "@/services/storage/profile-storage";
 import { getVPNState } from "@/services/storage/vpn-storage";
 
 import { requestVPNStatus } from "@/services/messaging/vpn-messaging";
 import { requestDNSLeakTest } from "@/services/messaging/dns-messaging";
 
+import {
+  setExtensionEnabled,
+} from "@/services/messaging/protection-messaging";
 import type {
   GeolocationSetting,
-  ProtectionControls,
-  ProtectionControlStatus,
   WebRTCProtectionLevel,
 } from "@/modules/protection/protection.types";
-
-import {
-  applyProtectionProfile,
-  requestProtectionStatus,
-  setExtensionEnabled,
-  updateProtectionControls,
-} from "@/services/messaging/protection-messaging";
 
 function App() {
   const queryClient = useQueryClient();
 
-  const [profile, setProfile] = useState<ProtectionProfile>(DEFAULT_PROFILE);
+  const {
+    settings,
+    profile,
+    isDataLoaded,
+    updateSettingField,
+    updateProfile: updateStoredProfile,
+    resetAll,
+    setSettings,
+  } = useAppData();
+
+  const {
+    controls: protectionControls,
+    isLoading: isProtectionLoading,
+    error: protectionError,
+    updateControls,
+    applyProfile,
+    setControls: setProtectionControls,
+    setError: setProtectionError,
+  } = useProtection(settings.enabled);
 
   const [currentPage, setCurrentPage] = useState<"home" | "settings" | "guide">(
     "home",
   );
-
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isExtensionUpdating, setIsExtensionUpdating] = useState(false);
-
-  const [protectionControls, setProtectionControls] =
-    useState<ProtectionControlStatus | null>(null);
-
-  const [isProtectionLoading, setIsProtectionLoading] = useState(true);
-  const [protectionError, setProtectionError] = useState<string | null>(null);
 
   const { data: vpnState } = useQuery({
     queryKey: ["vpn-state"],
@@ -80,16 +75,11 @@ function App() {
     refetchInterval: settings.enabled ? 30_000 : false,
   });
 
-  const { data: networkInfo } = useQuery({
-    queryKey: ["network-info"],
-    queryFn: getNetworkInfo,
-    enabled:
-      settings.enabled &&
+  const { data: networkInfo } = useNetworkInfo(
+    settings.enabled &&
       (currentPage === "home" ||
         (currentPage === "settings" && profile === "custom-location")),
-    staleTime: 60_000,
-    retry: 2,
-  });
+  );
 
   const {
     data: webRTCAnalysis,
@@ -140,63 +130,6 @@ function App() {
           ? "match"
           : "mismatch",
   };
-
-  useEffect(() => {
-    const loadAppData = async () => {
-      try {
-        const [storedSettings, storedProfile] = await Promise.all([
-          getSettings(),
-          getProfile(),
-        ]);
-
-        setSettings(storedSettings);
-        setProfile(storedProfile);
-      } catch (error) {
-        console.error("Failed to load app data:", error);
-      } finally {
-        setIsDataLoaded(true);
-      }
-    };
-
-    void loadAppData();
-  }, []);
-
-  useEffect(() => {
-    if (!isDataLoaded || !settings.enabled) return;
-
-    let isActive = true;
-
-    const loadProtectionStatus = async () => {
-      setIsProtectionLoading(true);
-
-      try {
-        const state = await requestProtectionStatus();
-
-        if (isActive) {
-          setProtectionControls(state);
-          setProtectionError(null);
-        }
-      } catch (error) {
-        if (isActive) {
-          setProtectionError(
-            error instanceof Error
-              ? error.message
-              : "Failed to load browser protection settings.",
-          );
-        }
-      } finally {
-        if (isActive) {
-          setIsProtectionLoading(false);
-        }
-      }
-    };
-
-    void loadProtectionStatus();
-
-    return () => {
-      isActive = false;
-    };
-  }, [isDataLoaded, settings.enabled]);
 
   useEffect(() => {
     if (!isDataLoaded || !settings.enabled) return;
@@ -268,108 +201,28 @@ function App() {
   };
 
   const updateSetting = async (key: "notifications", checked: boolean) => {
-    const updatedSettings: AppSettings = {
-      ...settings,
-      [key]: checked,
-    };
-
-    setSettings(updatedSettings);
-
-    try {
-      await saveSettings(updatedSettings);
-    } catch (error) {
-      setSettings(settings);
-      console.error("Failed to save settings:", error);
-    }
+    await updateSettingField(key, checked);
   };
 
   const updateExpectedCountry = async (countryCode: string | null) => {
-    const updatedSettings: AppSettings = {
-      ...settings,
-      expectedCountryCode: countryCode,
-    };
-
-    setSettings(updatedSettings);
-
-    try {
-      await saveSettings(updatedSettings);
-    } catch (error) {
-      setSettings(settings);
-      console.error("Failed to save expected country:", error);
-    }
+    await updateSettingField("expectedCountryCode", countryCode);
   };
 
-  const updateProfile = async (newProfile: ProtectionProfile) => {
+  const handleProfileChange = async (newProfile: ProtectionProfile) => {
     if (!settings.enabled || newProfile === profile) return;
 
-    const previousControls = protectionControls;
-
-    setIsProtectionLoading(true);
-    setProtectionError(null);
-
     try {
-      const state = await applyProtectionProfile(newProfile);
-
-      await saveProfile(newProfile);
-
-      setProfile(newProfile);
-      setProtectionControls(state);
+      await applyProfile(newProfile, protectionControls);
+      await updateStoredProfile(newProfile);
     } catch (error) {
-      try {
-        const restoredState = previousControls
-          ? await updateProtectionControls(previousControls)
-          : await applyProtectionProfile(profile);
-
-        setProtectionControls(restoredState);
-      } catch (rollbackError) {
-        setProtectionControls(null);
-
-        console.error(
-          "Failed to restore previous protection settings:",
-          rollbackError,
-        );
-
-        setProtectionError(
-          "Profile update failed and previous browser settings could not be restored. Please check your protection settings.",
-        );
-
-        return;
-      }
-
-      setProtectionError(
-        error instanceof Error
-          ? error.message
-          : "Failed to apply protection profile.",
-      );
-    } finally {
-      setIsProtectionLoading(false);
-    }
-  };
-
-  const handleProtectionUpdate = async (controls: ProtectionControls) => {
-    if (!settings.enabled) return;
-
-    setIsProtectionLoading(true);
-    setProtectionError(null);
-
-    try {
-      const state = await updateProtectionControls(controls);
-      setProtectionControls(state);
-    } catch (error) {
-      setProtectionError(
-        error instanceof Error
-          ? error.message
-          : "Browser protection controls may be partially changed. Please check your protection settings.",
-      );
-    } finally {
-      setIsProtectionLoading(false);
+      console.error("Failed to apply protection profile:", error);
     }
   };
 
   const handleWebRTCChange = (value: WebRTCProtectionLevel) => {
     if (!settings.enabled || !protectionControls) return;
 
-    void handleProtectionUpdate({
+    void updateControls({
       ...protectionControls,
       webRTCProtection: value,
     });
@@ -378,7 +231,7 @@ function App() {
   const handleThirdPartyCookiesChange = (checked: boolean) => {
     if (!settings.enabled || !protectionControls) return;
 
-    void handleProtectionUpdate({
+    void updateControls({
       ...protectionControls,
       blockThirdPartyCookies: checked,
     });
@@ -387,7 +240,7 @@ function App() {
   const handleGeolocationChange = (value: GeolocationSetting) => {
     if (!settings.enabled || !protectionControls) return;
 
-    void handleProtectionUpdate({
+    void updateControls({
       ...protectionControls,
       geolocation: value,
     });
@@ -395,30 +248,8 @@ function App() {
 
   const handleResetSettings = async () => {
     if (!settings.enabled) return;
-
-    setIsProtectionLoading(true);
-    setProtectionError(null);
-
-    try {
-      const state = await applyProtectionProfile(DEFAULT_PROFILE);
-
-      const [defaultSettings] = await Promise.all([
-        resetStoredSettings(),
-        saveProfile(DEFAULT_PROFILE),
-      ]);
-
-      setSettings(defaultSettings);
-      setProfile(DEFAULT_PROFILE);
-      setProtectionControls(state);
-    } catch (error) {
-      setProtectionError(
-        error instanceof Error
-          ? error.message
-          : "Failed to reset application settings.",
-      );
-    } finally {
-      setIsProtectionLoading(false);
-    }
+    await applyProfile(DEFAULT_PROFILE, null);
+    await resetAll();
   };
 
   const providerAnalysis = networkInfo ? analyzeProvider(networkInfo) : null;
@@ -516,7 +347,7 @@ function App() {
 
                 <ProfileSelector
                   value={profile}
-                  onChange={(newProfile) => void updateProfile(newProfile)}
+                  onChange={(newProfile) => void handleProfileChange(newProfile)}
                 />
 
                 <ProtectionOverview controls={protectionControls} />

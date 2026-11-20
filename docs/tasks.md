@@ -12,46 +12,6 @@
 
 Goal: Reduce duplicated orchestration and make MV3 message/state boundaries explicit.
 
-- [ ] **T-02-01 — Split popup orchestration from rendering**
-  - Problem: `src/App.tsx` owns page navigation, storage hydration, five query/mutation flows, timezone calculation, profile rollback, settings writes, and rendering in one large component.
-  - Files: `src/App.tsx`, `src/popup/components/`, `src/popup/pages/`
-  - Proposed fix: Extract focused hooks/controllers for app settings, protection controls, analyses, and timezone consistency; keep page components presentation-oriented.
-  - Effort: L
-  - Risk: Medium
-  - Acceptance: `App.tsx` is primarily composition/navigation and all existing popup flows remain functional; build and lint pass.
-
-- [ ] **T-02-02 — Eliminate duplicate network-query ownership**
-  - Problem: Both `src/App.tsx` and `src/popup/components/network-info.tsx` define the `network-info` query and call `getNetworkInfo`, with different query options and UI ownership.
-  - Files: `src/App.tsx`, `src/popup/components/network-info.tsx`, `src/modules/network/network.service.ts`
-  - Proposed fix: Use one query hook/data owner and pass its state to the display component, with one refresh policy and disabled-state behavior.
-  - Effort: M
-  - Risk: Medium
-  - Acceptance: One code path fetches network data; refresh, errors, and paused state remain correct; build and lint pass.
-
-- [ ] **T-02-03 — Centralize runtime-message contracts**
-  - Problem: Message string literals are duplicated across `service-worker.ts` and five messaging wrappers; wrappers use unchecked response casts, while request validation is uneven.
-  - Files: `src/background/service-worker.ts`, `src/services/messaging/`, `src/modules/protection/protection.schema.ts`, `src/modules/*/*.types.ts`
-  - Proposed fix: Define shared discriminated request/response types and Zod schemas, validate messages at the worker boundary, and validate or safely narrow responses in wrappers.
-  - Effort: L
-  - Risk: Medium
-  - Acceptance: Invalid request payloads and malformed responses fail predictably; no duplicate message constants remain; build and lint pass.
-
-- [ ] **T-02-04 — Decompose the service worker by responsibility**
-  - Problem: `src/background/service-worker.ts` combines alarm lifecycle, Global Switch transactions, message routing, validation, and feature execution. This makes MV3 lifecycle/error behavior difficult to test.
-  - Files: `src/background/service-worker.ts`, `src/services/messaging/`, `src/modules/protection/`, `src/modules/vpn/`
-  - Proposed fix: Extract alarm/state-lifecycle and message-handler modules with a thin registration entry point; ensure asynchronous listeners retain their response channel.
-  - Effort: L
-  - Risk: Medium
-  - Acceptance: Install/startup/alarm/message flows are covered by focused units and retain current behavior across worker restarts; build and lint pass.
-
-- [ ] **T-02-05 — Validate and consolidate persisted state**
-  - Problem: settings are manually narrowed, but protection snapshots are cast without validation and VPN state is blindly spread from storage. `locationProtection` and `privacyProtection` have no read usage; `resetProfile` and `getProfileConfig` have no call sites.
-  - Files: `src/services/storage/settings-storage.ts`, `src/services/storage/vpn-storage.ts`, `src/services/storage/profile-storage.ts`, `src/modules/profiles/profile.service.ts`
-  - Proposed fix: Add schemas/migrations for persisted records, centralize storage keys, and remove or wire verified-unused fields/exports only after confirming intended compatibility.
-  - Effort: M
-  - Risk: Medium
-  - Acceptance: Corrupt local-storage values fall back safely; retained fields and exports have consumers; build and lint pass.
-
 ## Phase 03 — Tooling and automated checks
 
 Goal: Make the current TypeScript/Vite project reliably checkable without assuming cancelled release/QA work exists.

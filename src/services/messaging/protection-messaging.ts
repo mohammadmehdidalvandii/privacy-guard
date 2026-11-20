@@ -4,17 +4,12 @@ import type {
 } from '@/modules/protection/protection.types'
 
 import type { ProtectionProfile } from '@/modules/profiles/profile.types'
-
-interface ProtectionResponse<T> {
-  success: boolean
-  data?: T
-  error?: string
-}
+import { MessageType, type BaseResponse } from './types'
 
 export async function requestProtectionStatus(): Promise<ProtectionControlStatus> {
   const response = (await chrome.runtime.sendMessage({
-    type: 'GET_PROTECTION_STATUS',
-  })) as ProtectionResponse<ProtectionControlStatus>
+    type: MessageType.GET_PROTECTION_STATUS,
+  })) as BaseResponse<ProtectionControlStatus>
 
   if (!response?.success || !response.data) {
     throw new Error(
@@ -29,9 +24,9 @@ export async function updateProtectionControls(
   controls: ProtectionControls,
 ): Promise<ProtectionControlStatus> {
   const response = (await chrome.runtime.sendMessage({
-    type: 'UPDATE_PROTECTION_CONTROLS',
+    type: MessageType.UPDATE_PROTECTION_CONTROLS,
     controls,
-  })) as ProtectionResponse<ProtectionControlStatus>
+  })) as BaseResponse<ProtectionControlStatus>
 
   if (!response?.success || !response.data) {
     throw new Error(
@@ -46,9 +41,9 @@ export async function applyProtectionProfile(
   profile: ProtectionProfile,
 ): Promise<ProtectionControlStatus> {
   const response = (await chrome.runtime.sendMessage({
-    type: 'APPLY_PROTECTION_PROFILE',
+    type: MessageType.APPLY_PROTECTION_PROFILE,
     profile,
-  })) as ProtectionResponse<ProtectionControlStatus>
+  })) as BaseResponse<ProtectionControlStatus>
 
   if (!response?.success || !response.data) {
     throw new Error(
@@ -63,9 +58,9 @@ export async function setExtensionEnabled(
   enabled: boolean,
 ): Promise<boolean> {
   const response = (await chrome.runtime.sendMessage({
-    type: 'SET_EXTENSION_ENABLED',
+    type: MessageType.SET_EXTENSION_ENABLED,
     enabled,
-  })) as ProtectionResponse<boolean>
+  })) as BaseResponse<boolean>
 
   if (!response?.success || response.data !== enabled) {
     throw new Error(

@@ -1,0 +1,18 @@
+export const MessageType = {
+  CHECK_VPN_STATUS: 'CHECK_VPN_STATUS',
+  GET_PROTECTION_STATUS: 'GET_PROTECTION_STATUS',
+  UPDATE_PROTECTION_CONTROLS: 'UPDATE_PROTECTION_CONTROLS',
+  APPLY_PROTECTION_PROFILE: 'APPLY_PROTECTION_PROFILE',
+  RUN_DNS_LEAK_TEST: 'RUN_DNS_LEAK_TEST',
+  RUN_FINGERPRINT_SCAN: 'RUN_FINGERPRINT_SCAN',
+  RUN_GEOLOCATION_SCAN: 'RUN_GEOLOCATION_SCAN',
+  SET_EXTENSION_ENABLED: 'SET_EXTENSION_ENABLED',
+} as const;
+
+export type MessageType = (typeof MessageType)[keyof typeof MessageType];
+
+export interface BaseResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}

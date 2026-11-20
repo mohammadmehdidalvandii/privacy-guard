@@ -1,15 +1,10 @@
 import type { VPNMonitorState } from '@/modules/vpn/vpn.types'
-
-interface VPNStatusResponse {
-  success: boolean
-  data?: VPNMonitorState
-  error?: string
-}
+import { MessageType, type BaseResponse } from './types'
 
 export async function requestVPNStatus(): Promise<VPNMonitorState> {
   const response = (await chrome.runtime.sendMessage({
-    type: 'CHECK_VPN_STATUS',
-  })) as VPNStatusResponse
+    type: MessageType.CHECK_VPN_STATUS,
+  })) as BaseResponse<VPNMonitorState>
 
   if (!response?.success || !response.data) {
     throw new Error(response?.error || 'VPN status check failed.')

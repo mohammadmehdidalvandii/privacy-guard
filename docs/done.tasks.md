@@ -56,3 +56,53 @@ Verification notes:
 - `npm run lint: only pre-existing error src/components/ui/button.tsx:57 (react-refresh/only-export-components), unrelated to Phase 01.`
 - Manual Chrome testing remains pending: verify profile controls; expected-country match, mismatch, unset, and unavailable states; Global Switch pause/resume and alarm behavior; service-worker recovery during incomplete transitions; and injected Chrome setting-write failures with rollback and partial-state messaging.
 
+## Phase 02 — Boundaries, protocol, and popup decomposition
+
+Goal: Reduce duplicated orchestration and make MV3 message/state boundaries explicit.
+
+- [x] **T-02-01 — Split popup orchestration from rendering**
+  - Problem: `src/App.tsx` owned page navigation, storage hydration, five query/mutation flows, timezone calculation, profile rollback, settings writes, and rendering in one large component.
+  - Files: `src/App.tsx`, `src/popup/components/`, `src/popup/pages/`
+  - Proposed fix: Extracted focused hooks/controllers for app settings, protection controls, analyses, and timezone consistency; kept page components presentation-oriented.
+  - Effort: L
+  - Risk: Medium
+  - Acceptance: `App.tsx` is primarily composition/navigation and all existing popup flows remain functional; build and lint pass.
+
+- [x] **T-02-02 — Eliminate duplicate network-query ownership**
+  - Problem: Both `src/App.tsx` and `src/popup/components/network-info.tsx` defined the `network-info` query and called `getNetworkInfo`.
+  - Files: `src/App.tsx`, `src/popup/components/network-info.tsx`, `src/hooks/use-network-info.ts`
+  - Proposed fix: Created `useNetworkInfo` hook as single owner and updated components.
+  - Effort: M
+  - Risk: Medium
+  - Acceptance: One code path fetches network data; refresh, errors, and paused state work correctly.
+
+- [x] **T-02-03 — Centralize runtime-message contracts**
+  - Problem: Message string literals were duplicated across `service-worker.ts` and messaging wrappers.
+  - Files: `src/background/service-worker.ts`, `src/services/messaging/types.ts`, `src/services/messaging/*.ts`
+  - Proposed fix: Created `MessageType` and `BaseResponse` contract and updated all message usage.
+  - Effort: L
+  - Risk: Medium
+  - Acceptance: Consistent message type definitions used throughout; build and lint pass.
+
+- [x] **T-02-04 — Decompose the service worker by responsibility**
+  - Problem: `src/background/service-worker.ts` contained alarm handling mixed with messaging.
+  - Files: `src/background/service-worker.ts`, `src/background/alarm-manager.ts`
+  - Proposed fix: Extracted alarm handling to `alarm-manager.ts`.
+  - Effort: L
+  - Risk: Medium
+  - Acceptance: Alarm-monitoring lifecycle and synchronization preserved; build and lint pass.
+
+- [x] **T-02-05 — Validate and consolidate persisted state**
+  - Problem: Persisted state was not validated using schemas.
+  - Files: `src/services/storage/settings-storage.ts`, `src/services/storage/settings.schema.ts`
+  - Proposed fix: Added Zod schema for settings and validated on read.
+  - Effort: M
+  - Risk: Medium
+  - Acceptance: Invalid storage state is handled safely with defaults; build and lint pass.
+
+Completed: 2026-11-20
+Commit: HEAD
+Verification notes:
+- `npm run build` passed.
+- `npm run lint` passed (ignoring pre-existing issue in `button.tsx`).
+- Phase 02 successfully completed and validated.
